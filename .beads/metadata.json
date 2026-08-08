@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "archive_ph_safari_plugin",
+  "project_id": "39a6c597-48b2-4df1-9dc7-8b2d3b57b9ec"
+}
