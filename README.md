@@ -4,67 +4,90 @@ A Safari toolbar extension. Click its icon on any web page and it opens
 the current tab's URL at `https://archive.ph/newest/<current-tab-url>` —
 the newest archived snapshot of that page, or archive.ph's prompt to save
 one if none exists yet. Handy for reading paywalled articles, dead links,
-or pages that have since been edited.
+or pages that have since been edited. Only `http:`/`https:` tabs are
+handled; other schemes (Safari's start page, `file:`, etc.) are ignored.
+
+## Quick start
+
+1. Clone this repo.
+2. Run `./install.sh` (builds the app and installs it to `/Applications`).
+3. Enable "Archive.ph Opener" in Safari Settings → Extensions.
+
+The default build is **ad-hoc signed**, so Safari will also require
+Develop → Allow Unsigned Extensions to be turned on before the extension
+shows up at all — see [Signing](#signing) below if you'd rather avoid
+that toggle.
 
 ## Requirements
 
 - macOS with Xcode installed (provides `xcodebuild` and `xcrun`)
 - Safari
 
-## Build & Install
+## Signing
 
-There are two ways to build, depending on whether you have an Apple
-Developer account.
+Safari only lists extensions that are development-signed, notarized
+Developer ID, or App Store. Anything else — including an *unnotarized*
+Developer ID build — is treated as unsigned.
 
-### Path A: No Apple Developer account (default)
+| Mode | How | Safari behavior |
+| --- | --- | --- |
+| Ad-hoc (default) | No Apple account, nothing to configure. | Extension is only listed while Develop → Allow Unsigned Extensions is enabled. **That toggle resets every time Safari restarts.** |
+| Apple Development | Requires any Apple Developer account, with the "Apple Development" certificate installed in your keychain. Recommended for personal use. | Trusted automatically on your own Mac — no toggle needed, survives Safari restarts. |
+| Developer ID | Requires a Developer ID Application certificate. | Only skips the toggle if the app is **notarized**. These scripts do not automate notarization, so an unnotarized Developer ID build is still treated as unsigned by Safari. |
+
+To sign with an identity other than ad-hoc, create a git-ignored
+`.signing.env` file at the repo root. It's `source`d by `build.sh`, so it
+executes as a shell script — keep it limited to plain variable
+assignments, nothing else:
 
 ```bash
-./build.sh
+SIGN_IDENTITY="Apple Development"
+SIGN_TEAM=YOURTEAMID
 ```
 
-With no signing configuration, `build.sh` ad-hoc signs the build
-(`CODE_SIGN_IDENTITY="-"`). On success it prints the absolute path of the
-built app, currently:
+Find your team ID on the
+[developer.apple.com account membership page](https://developer.apple.com/account),
+or by running `security find-identity -v -p codesigning`.
+
+## Manual build
+
+Running `./build.sh` alone builds the app without installing it. The
+built app ends up at:
 
 ```
 app/build/Build/Products/Debug/Archive.ph Opener.app
 ```
 
-1. Build: `./build.sh`
-2. Open the built app once so macOS registers the extension with Safari:
-   ```bash
-   open "app/build/Build/Products/Debug/Archive.ph Opener.app"
-   ```
-3. In Safari, go to Settings → Advanced and enable "Show features for web
-   developers". This reveals a Develop menu in the menu bar.
-4. In the Develop menu, enable "Allow Unsigned Extensions". **This resets
-   every time Safari restarts**, so you'll need to re-enable it whenever
-   you relaunch Safari.
-5. In Safari Settings → Extensions, enable "Archive.ph Opener" and grant it
-   access to the websites you want to use it on.
+You can run it from there and Safari will register the extension, but
+leaving copies in both `app/build` and `/Applications` causes Safari to
+list the extension twice (see Troubleshooting). Prefer `./install.sh`,
+which builds, installs to `/Applications`, and removes the build copy so
+only one registration exists.
 
-### Path B: With an Apple Developer account
+## Troubleshooting
 
-If you have a Developer ID Application certificate, you can have
-`build.sh` sign the build with your identity. Signed builds are trusted by
-Safari without the "Allow Unsigned Extensions" toggle, and that trust
-survives Safari restarts.
-
-Set `SIGN_IDENTITY` and `SIGN_TEAM` in your environment before running
-`./build.sh`, or create a git-ignored `.signing.env` file at the repo root
-containing exactly two variable assignments:
+**Extension doesn't appear in Safari Settings → Extensions.**
+Check what signing class the installed app actually has:
 
 ```bash
-SIGN_IDENTITY="Developer ID Application"
-SIGN_TEAM=YOURTEAMID
+spctl -a -t exec -vv "/Applications/Archive.ph Opener.app"
 ```
 
-`.signing.env` is `source`d by `build.sh`, so it executes as a shell
-script — keep it limited to plain variable assignments like the example
-above, nothing else. It's listed in `.gitignore` and never committed.
+If the result mentions "Unnotarized Developer ID" or the app is ad-hoc
+signed, Safari treats it as unsigned: either enable Develop → Allow
+Unsigned Extensions, or re-sign with an Apple Development identity (see
+Signing above). After changing signing, quit and reopen Safari — the
+Extensions list only refreshes on launch.
 
-With signing configured, install the same way as Path A (steps 1-2 and 5
-above), but you can skip the "Allow Unsigned Extensions" step (3-4).
+**Extension appears twice.**
+This means two app copies are registered. Check with:
+
+```bash
+pluginkit -m -v -i com.yourCompany.Archive-ph-Opener.Extension
+```
+
+Fix it by running `./install.sh`, which removes the `app/build` copy and
+re-registers only the `/Applications` copy, then restart Safari.
 
 ## How it works
 
@@ -78,7 +101,11 @@ above), but you can skip the "Allow Unsigned Extensions" step (3-4).
   Safari can load it.
 - `build.sh` drives `xcodebuild` against the generated Xcode project to
   produce the `.app`, applying whichever signing configuration is active
-  (see Build & Install above).
+  (see Signing above).
+- `install.sh` runs `build.sh`, copies the built app into
+  `/Applications`, removes the build-directory copy, and unregisters its
+  stale LaunchServices entry — so Safari only ever sees one registered
+  copy of the extension.
 
 ## Manual test checklist
 
