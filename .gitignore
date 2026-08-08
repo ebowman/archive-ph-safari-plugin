@@ -10,3 +10,6 @@ app/build/
 
 # Owner-local codesigning override, sourced by build.sh if present.
 .signing.env
+
+# Generated icon output from scripts/generate-icons.swift
+scripts/icon-out/
