@@ -10,6 +10,17 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Optional local override for codesigning identity/team. Git-ignored; see
+# the signing comment below for details.
+if [[ -f "${REPO_ROOT}/.signing.env" ]]; then
+  # shellcheck disable=SC1091
+  source "${REPO_ROOT}/.signing.env"
+fi
+
+SIGN_IDENTITY="${SIGN_IDENTITY:--}"
+SIGN_TEAM="${SIGN_TEAM:-}"
+
 DERIVED_DATA_PATH="${REPO_ROOT}/app/build"
 CONFIGURATION="Debug"
 
@@ -39,19 +50,44 @@ echo "Project: ${XCODEPROJ}"
 echo "Scheme:  ${SCHEME}"
 echo "Config:  ${CONFIGURATION}"
 
-# Sign with Developer ID (team Y5SB82BPYL) so Safari treats the extension as
-# properly signed — no "Allow Unsigned Extensions" toggle needed, and it
-# survives Safari restarts. Do NOT use CODE_SIGNING_ALLOWED=NO: that leaves
-# only linker-signed binaries with wrong codesign identifiers, and
-# macOS/pluginkit refuses to register the appex. If the Developer ID identity
-# is unavailable, fall back to ad-hoc: CODE_SIGN_IDENTITY="-" (works, but
-# requires the unsigned-extensions toggle each Safari restart).
+# Signing is configurable so this repo builds out of the box for anyone who
+# clones it, while still supporting Developer ID signing for the owner.
+#
+# Do NOT use CODE_SIGNING_ALLOWED=NO: that leaves only linker-signed binaries
+# with wrong codesign identifiers, and macOS/pluginkit refuses to register
+# the appex.
+#
+# Default (no env vars, no .signing.env): ad-hoc signing
+# (CODE_SIGN_IDENTITY="-"). This builds fine for anyone, but Safari will
+# require Develop -> "Allow Unsigned Extensions" to be re-enabled after
+# every restart.
+#
+# Identity signing (e.g. Developer ID Application): set SIGN_IDENTITY and
+# SIGN_TEAM in the environment, or create a git-ignored "${REPO_ROOT}/.signing.env"
+# file (sourced above) containing:
+#   SIGN_IDENTITY="Developer ID Application"
+#   SIGN_TEAM=YOURTEAMID
+# This makes Safari treat the extension as properly signed — no toggle
+# needed, and it survives Safari restarts.
+SIGNING_ARGS=()
+if [[ -n "${SIGN_TEAM}" ]]; then
+  SIGNING_ARGS=(
+    CODE_SIGN_STYLE=Manual
+    CODE_SIGN_IDENTITY="${SIGN_IDENTITY}"
+    DEVELOPMENT_TEAM="${SIGN_TEAM}"
+  )
+  echo "Signing: Developer ID (team ${SIGN_TEAM})"
+else
+  SIGNING_ARGS=(
+    CODE_SIGN_IDENTITY="-"
+  )
+  echo "Signing: ad-hoc (set SIGN_TEAM/SIGN_IDENTITY or .signing.env for identity signing)"
+fi
+
 xcodebuild -project "${XCODEPROJ}" -scheme "${SCHEME}" \
   -configuration "${CONFIGURATION}" \
   -derivedDataPath "${DERIVED_DATA_PATH}" \
-  CODE_SIGN_STYLE=Manual \
-  CODE_SIGN_IDENTITY="Developer ID Application" \
-  DEVELOPMENT_TEAM=Y5SB82BPYL \
+  "${SIGNING_ARGS[@]}" \
   build
 
 APP_PATH="$(find "${DERIVED_DATA_PATH}/Build/Products/${CONFIGURATION}" -maxdepth 1 -name "*.app" -print -quit)"
