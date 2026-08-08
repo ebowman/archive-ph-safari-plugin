@@ -62,13 +62,16 @@ echo "Config:  ${CONFIGURATION}"
 # require Develop -> "Allow Unsigned Extensions" to be re-enabled after
 # every restart.
 #
-# Identity signing (e.g. Developer ID Application): set SIGN_IDENTITY and
-# SIGN_TEAM in the environment, or create a git-ignored "${REPO_ROOT}/.signing.env"
-# file (sourced above) containing:
-#   SIGN_IDENTITY="Developer ID Application"
+# Identity signing: set SIGN_IDENTITY and SIGN_TEAM in the environment, or
+# create a git-ignored "${REPO_ROOT}/.signing.env" file (sourced above)
+# containing:
+#   SIGN_IDENTITY="Apple Development"
 #   SIGN_TEAM=YOURTEAMID
-# This makes Safari treat the extension as properly signed — no toggle
-# needed, and it survives Safari restarts.
+# Safari only skips the "Allow Unsigned Extensions" toggle for extensions
+# that are development-signed (Apple Development identity, on your own
+# Mac) or notarized Developer ID. This script does not automate
+# notarization, so an unnotarized Developer ID build is still treated as
+# unsigned by Safari, same as ad-hoc.
 SIGNING_ARGS=()
 if [[ -n "${SIGN_TEAM}" ]]; then
   SIGNING_ARGS=(
