@@ -39,21 +39,14 @@ echo "Project: ${XCODEPROJ}"
 echo "Scheme:  ${SCHEME}"
 echo "Config:  ${CONFIGURATION}"
 
-# Build with code signing disabled. This is the variant that succeeds for
-# this project (the generated targets don't require entitlements that force
-# signing for a local Debug build).
-#
-# If a future change to the generated project causes this to fail with a
-# signing-related error, fall back to ad-hoc signing instead:
-#   xcodebuild -project "${XCODEPROJ}" -scheme "${SCHEME}" \
-#     -configuration "${CONFIGURATION}" \
-#     -derivedDataPath "${DERIVED_DATA_PATH}" \
-#     CODE_SIGN_IDENTITY="-" \
-#     build
+# Build with ad-hoc signing (no paid identity needed). Do NOT use
+# CODE_SIGNING_ALLOWED=NO here: that leaves only linker-signed binaries with
+# wrong codesign identifiers, and macOS/pluginkit refuses to register the
+# Safari extension appex — it never appears in Safari's Extensions settings.
 xcodebuild -project "${XCODEPROJ}" -scheme "${SCHEME}" \
   -configuration "${CONFIGURATION}" \
   -derivedDataPath "${DERIVED_DATA_PATH}" \
-  CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" \
+  CODE_SIGN_IDENTITY="-" \
   build
 
 APP_PATH="$(find "${DERIVED_DATA_PATH}/Build/Products/${CONFIGURATION}" -maxdepth 1 -name "*.app" -print -quit)"
