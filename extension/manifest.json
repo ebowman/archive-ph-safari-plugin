@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "Archive.ph Opener",
+  "version": "0.1.0",
+  "description": "Opens the current tab's URL in archive.ph.",
+  "permissions": ["tabs"],
+  "action": {
+    "default_title": "Open in archive.ph",
+    "default_icon": {
+      "16": "images/toolbar-16.png",
+      "32": "images/toolbar-32.png"
+    }
+  },
+  "icons": {
+    "48": "images/icon-48.png",
+    "96": "images/icon-96.png",
+    "128": "images/icon-128.png"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "scripts": ["background.js"]
+  }
+}
