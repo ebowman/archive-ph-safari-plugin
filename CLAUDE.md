@@ -64,6 +64,11 @@ This protocol applies when ending a Beads implementation workflow. It is subordi
 # Build the Xcode app wrapper (requires Xcode); prints the built .app path
 ./build.sh
 
+# Build, install into /Applications, remove and lsregister-unregister the
+# app/build copy (prevents a duplicate Safari extension listing), and open
+# the app to register the extension
+./install.sh
+
 # Validate the extension source without a full build
 python3 -m json.tool extension/manifest.json
 node --check extension/background.js
@@ -78,11 +83,25 @@ relative path — do not regenerate the project casually, since a converter
 re-run would revert the hand-fixed extension bundle id
 `com.yourCompany.Archive-ph-Opener.Extension`. Build via `./build.sh`.
 
+Safari only lists an extension when its host app is development-signed
+(Apple Development identity), notarized Developer ID, or App Store signed;
+an unnotarized Developer ID build is treated as unsigned by Safari (spctl
+reports "Unnotarized Developer ID"), same as ad-hoc. Two on-disk copies of
+the app (e.g. `app/build/.../Archive.ph Opener.app` plus the copy in
+`/Applications`) cause Safari to list the extension twice — `./install.sh`
+prevents this by installing to `/Applications` and removing +
+lsregister-unregistering the build copy. Signing configuration is read from
+a git-ignored `.signing.env` file (`SIGN_IDENTITY`/`SIGN_TEAM`); without it,
+builds are ad-hoc signed.
+
 ## Conventions & Patterns
 
 `extension/` is the only place extension logic lives; treat the Xcode
 project under `app/` as generated wrapper scaffolding, not a place to add
 new logic.
+
+Prefer `./install.sh` over manually copying the built app; never leave app
+copies in two locations, since Safari will list the extension twice.
 <!-- BEGIN domestique (managed) -->
 # Orchestration policy
 
