@@ -39,14 +39,19 @@ echo "Project: ${XCODEPROJ}"
 echo "Scheme:  ${SCHEME}"
 echo "Config:  ${CONFIGURATION}"
 
-# Build with ad-hoc signing (no paid identity needed). Do NOT use
-# CODE_SIGNING_ALLOWED=NO here: that leaves only linker-signed binaries with
-# wrong codesign identifiers, and macOS/pluginkit refuses to register the
-# Safari extension appex — it never appears in Safari's Extensions settings.
+# Sign with Developer ID (team Y5SB82BPYL) so Safari treats the extension as
+# properly signed — no "Allow Unsigned Extensions" toggle needed, and it
+# survives Safari restarts. Do NOT use CODE_SIGNING_ALLOWED=NO: that leaves
+# only linker-signed binaries with wrong codesign identifiers, and
+# macOS/pluginkit refuses to register the appex. If the Developer ID identity
+# is unavailable, fall back to ad-hoc: CODE_SIGN_IDENTITY="-" (works, but
+# requires the unsigned-extensions toggle each Safari restart).
 xcodebuild -project "${XCODEPROJ}" -scheme "${SCHEME}" \
   -configuration "${CONFIGURATION}" \
   -derivedDataPath "${DERIVED_DATA_PATH}" \
-  CODE_SIGN_IDENTITY="-" \
+  CODE_SIGN_STYLE=Manual \
+  CODE_SIGN_IDENTITY="Developer ID Application" \
+  DEVELOPMENT_TEAM=Y5SB82BPYL \
   build
 
 APP_PATH="$(find "${DERIVED_DATA_PATH}/Build/Products/${CONFIGURATION}" -maxdepth 1 -name "*.app" -print -quit)"

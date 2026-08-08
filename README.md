@@ -1,6 +1,6 @@
 # Archive.ph Opener
 
-A personal-use, unsigned Safari extension. Click the toolbar icon on any
+A personal-use Safari extension. Click the toolbar icon on any
 `http://` or `https://` page and the extension opens a new tab at
 `https://archive.ph/newest/<current-tab-url>`, which redirects to the newest
 archived snapshot of that page, or offers to archive it if no snapshot
@@ -24,20 +24,24 @@ app/build/Build/Products/Debug/Archive.ph Opener.app
 
 ## Install / enable for personal use
 
-Since this extension is unsigned, Safari requires a few one-time (and
-per-session) steps to allow it to run:
+The build is signed with a Developer ID certificate (team `Y5SB82BPYL`), so
+Safari treats it as a properly signed extension — no "Allow Unsigned
+Extensions" toggle needed:
 
 1. Build the app: `./build.sh`
 2. Open the built app once so macOS registers the extension with Safari:
    ```bash
    open "app/build/Build/Products/Debug/Archive.ph Opener.app"
    ```
-3. In Safari, enable the Develop menu if it isn't already visible: Safari
-   Settings → Advanced → check "Show features for web developers".
-4. Develop menu → "Allow Unsigned Extensions". Note: this setting resets
-   every time Safari restarts, so you'll need to re-enable it each session.
-5. Safari Settings → Extensions → enable "Archive.ph Opener", and grant it
+3. Safari Settings → Extensions → enable "Archive.ph Opener", and grant it
    access to websites when prompted.
+
+**Fallback without the signing identity:** if the Developer ID certificate
+isn't available in the keychain, switch `build.sh` to ad-hoc signing
+(`CODE_SIGN_IDENTITY="-"`, see the comment in the script). Ad-hoc builds
+additionally require Safari's Develop menu → "Allow Unsigned Extensions"
+(Settings → Advanced → "Show features for web developers" to reveal the
+menu), and that toggle resets on every Safari restart.
 
 ## Usage
 
