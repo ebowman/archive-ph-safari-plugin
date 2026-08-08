@@ -7,3 +7,6 @@
 
 # Xcode build output (derived data) from build.sh
 app/build/
+
+# Owner-local codesigning override, sourced by build.sh if present.
+.signing.env
