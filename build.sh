@@ -76,7 +76,7 @@ if [[ -n "${SIGN_TEAM}" ]]; then
     CODE_SIGN_IDENTITY="${SIGN_IDENTITY}"
     DEVELOPMENT_TEAM="${SIGN_TEAM}"
   )
-  echo "Signing: Developer ID (team ${SIGN_TEAM})"
+  echo "Signing: identity \"${SIGN_IDENTITY}\" (team ${SIGN_TEAM})"
 else
   SIGNING_ARGS=(
     CODE_SIGN_IDENTITY="-"
