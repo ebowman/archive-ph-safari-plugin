@@ -4,6 +4,15 @@
   "version": "0.1.0",
   "description": "Opens the current tab's URL in archive.ph.",
   "permissions": ["tabs", "contextMenus"],
+  "host_permissions": [
+    "https://archive.ph/*",
+    "https://archive.today/*",
+    "https://archive.fo/*",
+    "https://archive.is/*",
+    "https://archive.li/*",
+    "https://archive.md/*",
+    "https://archive.vn/*"
+  ],
   "action": {
     "default_title": "Open in archive.ph",
     "default_icon": {
