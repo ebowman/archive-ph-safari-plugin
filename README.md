@@ -9,18 +9,46 @@ handled; other schemes (Safari's start page, `file:`, etc.) are ignored.
 
 ## Quick start
 
+Paste this into Terminal:
+
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/ebowman/archive-ph-safari-plugin/main/scripts/bootstrap.sh)"
+```
+
+Then enable "Archive.ph Opener" in Safari Settings → Extensions.
+
+What the installer does:
+
+- Checks that `git` and full Xcode are installed.
+- Auto-detects an Apple Development signing identity in your
+  Keychain and signs the build with it, so the extension stays
+  enabled across Safari restarts.
+- Clones the repo into a temporary directory, builds it, installs
+  the app to `/Applications`, and deletes the temporary clone.
+- Re-running the same command later updates to the latest version.
+
+If no signing identity is found, the installer explains the
+consequence and asks for confirmation (press Enter) before producing
+an **ad-hoc** build, which requires Safari's Develop → Allow Unsigned
+Extensions to be re-enabled after every Safari restart. The permanent
+fix is free — no paid developer account needed: Xcode → Settings →
+Accounts → add your Apple ID → Manage Certificates → "+" → Apple
+Development, then re-run the installer. See [Signing](#signing)
+below for the full details on signing tiers.
+
+### Manual install
+
+For development, or to pin a specific signing identity via
+`.signing.env` (see [Signing](#signing)):
+
 1. Clone this repo.
 2. Run `./install.sh` (builds the app and installs it to `/Applications`).
 3. Enable "Archive.ph Opener" in Safari Settings → Extensions.
 
-The default build is **ad-hoc signed**, so Safari will also require
-Develop → Allow Unsigned Extensions to be turned on before the extension
-shows up at all — see [Signing](#signing) below if you'd rather avoid
-that toggle.
-
 ## Requirements
 
-- macOS with Xcode installed (provides `xcodebuild` and `xcrun`)
+- macOS with full Xcode installed (provides `xcodebuild` and `xcrun`;
+  the Command Line Tools alone are not enough)
 - Safari
 
 ## Signing
@@ -35,10 +63,12 @@ Developer ID build — is treated as unsigned.
 | Apple Development | Requires any Apple Developer account, with the "Apple Development" certificate installed in your keychain. Recommended for personal use. | Trusted automatically on your own Mac — no toggle needed, survives Safari restarts. |
 | Developer ID | Requires a Developer ID Application certificate. | Only skips the toggle if the app is **notarized**. These scripts do not automate notarization, so an unnotarized Developer ID build is still treated as unsigned by Safari. |
 
-To sign with an identity other than ad-hoc, create a git-ignored
-`.signing.env` file at the repo root. It's `source`d by `build.sh`, so it
-executes as a shell script — keep it limited to plain variable
-assignments, nothing else:
+The [Quick start](#quick-start) one-liner auto-detects an Apple
+Development identity in your Keychain and uses it automatically. For
+[Manual install](#manual-install), or to pin a specific identity, create
+a git-ignored `.signing.env` file at the repo root instead. It's
+`source`d by `build.sh`, so it executes as a shell script — keep it
+limited to plain variable assignments, nothing else:
 
 ```bash
 SIGN_IDENTITY="Apple Development"
