@@ -3,7 +3,7 @@
   "name": "Archive.ph Opener",
   "version": "0.1.0",
   "description": "Opens the current tab's URL in archive.ph.",
-  "permissions": ["tabs", "contextMenus"],
+  "permissions": ["tabs", "contextMenus", "storage"],
   "host_permissions": [
     "https://archive.ph/*",
     "https://archive.today/*",
@@ -28,5 +28,8 @@
   "background": {
     "service_worker": "background.js",
     "scripts": ["background.js"]
+  },
+  "options_ui": {
+    "page": "settings/settings.html"
   }
 }

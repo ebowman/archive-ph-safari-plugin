@@ -37,7 +37,26 @@ async function pickMirror() {
   return MIRRORS[0];
 }
 
-async function openArchive(rawUrl) {
+// Reads the "open in a new tab" preference from storage.local, defaulting
+// to true (current/legacy behavior) when unset or when storage is
+// unavailable (e.g. in a test harness or an older browser build).
+async function shouldUseNewTab() {
+  if (!api.storage || !api.storage.local) return true;
+  try {
+    const { newTab } = await api.storage.local.get("newTab");
+    return newTab !== false;
+  } catch (e) {
+    return true;
+  }
+}
+
+// options.tabId: the id of the tab the action was triggered from, used to
+// update that tab in place when the "reuse current tab" setting is on.
+// options.forceNewTab: when true, always opens a new tab regardless of the
+// setting -- used for context-menu link archiving, where reusing the
+// current tab would destroy the page the user is reading in order to show
+// an archive of a *different* URL (the link's target, not the page itself).
+async function openArchive(rawUrl, { tabId, forceNewTab = false } = {}) {
   if (!rawUrl) return;
 
   let isHttp = false;
@@ -56,18 +75,25 @@ async function openArchive(rawUrl) {
   const safeUrl = rawUrl.replaceAll("#", "%23");
   const base = await pickMirror();
   const archiveUrl = `${base}/newest/${safeUrl}`;
-  api.tabs.create({ url: archiveUrl });
+
+  const useNewTab = forceNewTab || (await shouldUseNewTab());
+
+  if (!useNewTab && tabId !== undefined && tabId !== null) {
+    api.tabs.update(tabId, { url: archiveUrl });
+  } else {
+    api.tabs.create({ url: archiveUrl });
+  }
 }
 
 // Callers treat this as fire-and-forget; ensure rejections never surface
 // as unhandled promise rejections.
-function openArchiveSafe(rawUrl) {
-  openArchive(rawUrl).catch(() => {});
+function openArchiveSafe(rawUrl, options) {
+  openArchive(rawUrl, options).catch(() => {});
 }
 
 api.action.onClicked.addListener((tab) => {
   if (!tab || !tab.url) return;
-  openArchiveSafe(tab.url);
+  openArchiveSafe(tab.url, { tabId: tab.id });
 });
 
 const menus = api.contextMenus || api.menus;
@@ -88,6 +114,12 @@ if (menus) {
 
   menus.onClicked.addListener((info, tab) => {
     const targetUrl = info.linkUrl || (tab && tab.url);
-    openArchiveSafe(targetUrl);
+    // Archiving a link (info.linkUrl set) always opens a new tab: the
+    // link's target is a different URL than the page the user is on, so
+    // reusing the current tab would replace the page they're reading with
+    // an archive of something else entirely. Only "archive this page"
+    // (no linkUrl) honors the reuse-current-tab setting.
+    const forceNewTab = Boolean(info.linkUrl);
+    openArchiveSafe(targetUrl, { tabId: tab && tab.id, forceNewTab });
   });
 }
