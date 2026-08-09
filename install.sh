@@ -48,11 +48,11 @@ if ! ditto "${BUILD_APP_PATH}" "${INSTALLED_APP_PATH}" 2>"${ERR_LOG}"; then
   exit 1
 fi
 
-echo "==> Cleaning up build output..."
-rm -rf "${REPO_ROOT}/app/build"
-
 echo "==> Unregistering stale build-path registration (if any)..."
 "${LSREGISTER}" -f -u "${BUILD_APP_PATH}" || true
+
+echo "==> Cleaning up build output..."
+rm -rf "${REPO_ROOT}/app/build"
 
 echo "==> Opening ${INSTALLED_APP_PATH} to register the extension..."
 open "${INSTALLED_APP_PATH}"

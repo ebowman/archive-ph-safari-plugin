@@ -13,6 +13,10 @@ api.action.onClicked.addListener((tab) => {
 
   if (!isHttp) return;
 
-  const archiveUrl = "https://archive.ph/newest/" + tab.url;
+  // Percent-encode only '#' so a URL fragment isn't swallowed as the
+  // archive.ph page's own fragment; everything else is appended raw
+  // since archive.ph expects an un-encoded URL.
+  const safeUrl = tab.url.replaceAll("#", "%23");
+  const archiveUrl = "https://archive.ph/newest/" + safeUrl;
   api.tabs.create({ url: archiveUrl });
 });
