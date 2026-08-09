@@ -27,7 +27,7 @@
   },
   "background": {
     "service_worker": "background.js",
-    "scripts": ["background.js"]
+    "scripts": ["archive-url.js", "background.js"]
   },
   "options_ui": {
     "page": "settings/settings.html"

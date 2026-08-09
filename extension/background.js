@@ -1,16 +1,16 @@
+// Safari loads background.scripts as separate <script> tags so ArchiveUrl
+// is already a global by the time this file runs; Chrome's service_worker
+// path loads only this one file, so pull archive-url.js in manually there.
+if (typeof importScripts === "function" && typeof ArchiveUrl === "undefined") {
+  importScripts("archive-url.js");
+}
+
 const api = typeof browser !== "undefined" ? browser : chrome;
 
 // Mirror domains in order of preference; archive.ph is tried first since
-// it's the canonical/most commonly used mirror.
-const MIRRORS = [
-  "https://archive.ph",
-  "https://archive.today",
-  "https://archive.fo",
-  "https://archive.is",
-  "https://archive.li",
-  "https://archive.md",
-  "https://archive.vn",
-];
+// it's the canonical/most commonly used mirror. Lives in archive-url.js so
+// the settings page and background script share one source of truth.
+const MIRRORS = ArchiveUrl.MIRRORS;
 
 // Returns true if the origin responds to an HTTP HEAD request at all, even
 // with an error status (e.g. 429/503) -- that still means the host is up.
@@ -69,12 +69,8 @@ async function openArchive(rawUrl, { tabId, forceNewTab = false } = {}) {
 
   if (!isHttp) return;
 
-  // Percent-encode only '#' so a URL fragment isn't swallowed as the
-  // archive.ph page's own fragment; everything else is appended raw
-  // since archive.ph expects an un-encoded URL.
-  const safeUrl = rawUrl.replaceAll("#", "%23");
   const base = await pickMirror();
-  const archiveUrl = `${base}/newest/${safeUrl}`;
+  const archiveUrl = ArchiveUrl.buildArchiveUrl(base, rawUrl);
 
   const useNewTab = forceNewTab || (await shouldUseNewTab());
 
