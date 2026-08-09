@@ -111,6 +111,23 @@ func renderTemplateGlyph(size: Int) -> NSBitmapImageRep {
     return rep
 }
 
+/// Renders the color toolbar glyph (no background tile) at the given pixel
+/// size, using the same red archive-box palette as the color tiles, with the
+/// same ~12% padding geometry the monochrome template glyph used.
+func renderColorToolbarGlyph(size: Int) -> NSBitmapImageRep {
+    let sizeF = CGFloat(size)
+    let rep = makeBitmapRep(size: size)
+
+    withGraphicsContext(rep) {
+        let fullRect = CGRect(x: 0, y: 0, width: sizeF, height: sizeF)
+        // ~12% padding on each side -> glyph occupies ~76% of canvas width,
+        // matching the template glyph's geometry.
+        drawArchiveGlyph(in: fullRect, glyphFraction: 0.76, boxColor: colorPrimaryRed, slotColor: colorAccentRed)
+    }
+
+    return rep
+}
+
 // MARK: - Bitmap / context utilities
 
 func makeBitmapRep(size: Int) -> NSBitmapImageRep {
@@ -189,13 +206,14 @@ struct IconSpec {
     enum Kind {
         case color
         case template
+        case colorToolbar
     }
 }
 
 let manifest: [IconSpec] = [
-    // Safari toolbar template glyphs
-    IconSpec(filename: "toolbar-16.png", size: 16, kind: .template),
-    IconSpec(filename: "toolbar-32.png", size: 32, kind: .template),
+    // Safari toolbar color glyphs (red archive-box, transparent background)
+    IconSpec(filename: "toolbar-16.png", size: 16, kind: .colorToolbar),
+    IconSpec(filename: "toolbar-32.png", size: 32, kind: .colorToolbar),
 
     // General-purpose color icons
     IconSpec(filename: "icon-48.png", size: 48, kind: .color),
@@ -227,6 +245,8 @@ for spec in manifest {
         rep = renderColorTile(size: spec.size)
     case .template:
         rep = renderTemplateGlyph(size: spec.size)
+    case .colorToolbar:
+        rep = renderColorToolbarGlyph(size: spec.size)
     }
     let url = outDir.appendingPathComponent(spec.filename)
     writePNG(rep, to: url)
@@ -307,7 +327,7 @@ func renderContactSheet() -> NSBitmapImageRep {
             for size in templateSizes {
                 let cellSize = CGFloat(size)
                 let cellRect = CGRect(x: x, y: centerY - cellSize / 2, width: cellSize, height: cellSize)
-                drawArchiveGlyph(in: cellRect, glyphFraction: 0.76, boxColor: colorTemplateBlack, slotColor: nil)
+                drawArchiveGlyph(in: cellRect, glyphFraction: 0.76, boxColor: colorPrimaryRed, slotColor: colorAccentRed)
                 x += maxCellSize + cellSpacing
             }
         }
@@ -451,6 +471,106 @@ for spec in manifest where spec.kind == .template {
     templatePurityOK = templatePurityOK && ok
     if ok {
         print("  OK  \(spec.filename): template purity (no colored pixels)")
+    }
+}
+
+// 2b. Color toolbar PNGs must be red-dominant glyphs on a transparent
+// background: at least one pixel with R substantially greater than G and B,
+// and no background tile (all four corner pixels fully transparent).
+func decodeRGBA(url: URL) -> (width: Int, height: Int, pixelData: [UInt8])? {
+    guard let dataProvider = CGDataProvider(url: url as CFURL),
+          let cgImage = CGImage(
+            pngDataProviderSource: dataProvider,
+            decode: nil,
+            shouldInterpolate: false,
+            intent: .defaultIntent
+          ) else {
+        return nil
+    }
+
+    let width = cgImage.width
+    let height = cgImage.height
+    let bytesPerPixel = 4
+    let bytesPerRow = bytesPerPixel * width
+    var pixelData = [UInt8](repeating: 0, count: bytesPerRow * height)
+
+    guard let colorSpace = CGColorSpace(name: CGColorSpace.sRGB) else {
+        return nil
+    }
+
+    guard let context = CGContext(
+        data: &pixelData,
+        width: width,
+        height: height,
+        bitsPerComponent: 8,
+        bytesPerRow: bytesPerRow,
+        space: colorSpace,
+        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+    ) else {
+        return nil
+    }
+
+    context.draw(cgImage, in: CGRect(x: 0, y: 0, width: width, height: height))
+    return (width, height, pixelData)
+}
+
+func verifyColorToolbarGlyph(url: URL) -> Bool {
+    guard let (width, height, pixelData) = decodeRGBA(url: url) else {
+        validationFailures.append("COLOR TOOLBAR GLYPH: failed to decode \(url.lastPathComponent)")
+        return false
+    }
+
+    let bytesPerPixel = 4
+    let bytesPerRow = bytesPerPixel * width
+
+    // No background tile: all four corner pixels must be fully transparent.
+    let corners = [
+        (x: 0, y: 0),
+        (x: width - 1, y: 0),
+        (x: 0, y: height - 1),
+        (x: width - 1, y: height - 1),
+    ]
+    var ok = true
+    for corner in corners {
+        let offset = corner.y * bytesPerRow + corner.x * bytesPerPixel
+        let a = pixelData[offset + 3]
+        if a != 0 {
+            validationFailures.append(
+                "COLOR TOOLBAR GLYPH: \(url.lastPathComponent) has non-transparent corner pixel at (\(corner.x), \(corner.y)) (a=\(a)) — background tile present?"
+            )
+            ok = false
+        }
+    }
+
+    // Must contain at least one red-dominant pixel: R substantially greater
+    // than both G and B (and visibly opaque).
+    var foundRedDominant = false
+    for pixelIndex in 0..<(width * height) {
+        let offset = pixelIndex * bytesPerPixel
+        let r = pixelData[offset]
+        let g = pixelData[offset + 1]
+        let b = pixelData[offset + 2]
+        let a = pixelData[offset + 3]
+        if a > 0 && Int(r) > Int(g) + 40 && Int(r) > Int(b) + 40 {
+            foundRedDominant = true
+            break
+        }
+    }
+    if !foundRedDominant {
+        validationFailures.append("COLOR TOOLBAR GLYPH: \(url.lastPathComponent) has no red-dominant pixels")
+        ok = false
+    }
+
+    return ok
+}
+
+var colorToolbarGlyphOK = true
+for spec in manifest where spec.kind == .colorToolbar {
+    let url = outDir.appendingPathComponent(spec.filename)
+    let ok = verifyColorToolbarGlyph(url: url)
+    colorToolbarGlyphOK = colorToolbarGlyphOK && ok
+    if ok {
+        print("  OK  \(spec.filename): color toolbar glyph (red-dominant, transparent corners)")
     }
 }
 
