@@ -13,3 +13,4 @@ app/build/
 
 # Generated icon output from scripts/generate-icons.swift
 scripts/icon-out/
+.DS_Store
