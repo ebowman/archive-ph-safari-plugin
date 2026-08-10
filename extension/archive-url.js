@@ -1,6 +1,15 @@
 // Pure URL helpers shared by background.js and (in a later bead) the
 // settings page. No browser APIs are touched here so this file can be
 // loaded standalone under plain node for testing.
+//
+// Wrapped in an IIFE so only globalThis.ArchiveUrl escapes this file's
+// scope: Safari loads archive-url.js as a sibling <script> alongside
+// background.js (and, in other contexts, settings.js / snapshot-probe.js),
+// all sharing ONE top-level lexical scope. An unwrapped top-level const
+// here (e.g. MIRRORS) would collide with any same-named top-level
+// declaration in a sibling script and throw "Can't create duplicate
+// variable", killing the whole shared scope (see bead 9k9).
+(function () {
 
 // Mirror domains in order of preference; archive.ph is tried first since
 // it's the canonical/most commonly used mirror.
@@ -105,8 +114,11 @@ function normalizeDomain(input) {
   // Strip any path/query/hash by keeping only the authority segment.
   value = value.split(/[/?#]/)[0];
 
-  // Strip userinfo if present (e.g. "user@example.com").
-  value = value.split("@").pop();
+  // Strip userinfo if present (e.g. "user@example.com"). split() always
+  // returns a non-empty array so pop() can't actually be undefined here;
+  // the `?? value` fallback just satisfies the type checker (TS7 can't
+  // infer split()'s result is non-empty) without changing behavior.
+  value = value.split("@").pop() ?? value;
 
   // Strip a trailing port (e.g. "example.com:8080"), but not IPv6 brackets.
   if (!value.startsWith("[")) {
@@ -152,3 +164,5 @@ globalThis.ArchiveUrl = {
   normalizeDomain,
   urlMatchesDomain,
 };
+
+})();

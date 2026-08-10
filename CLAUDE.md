@@ -72,6 +72,14 @@ This protocol applies when ending a Beads implementation workflow. It is subordi
 # Validate the extension source without a full build
 python3 -m json.tool extension/manifest.json
 node --check extension/background.js
+
+# Lint gate: type-checks the four extension scripts as global (non-module)
+# scripts sharing one lexical scope, catching cross-file redeclarations of
+# top-level bindings (see bead archive-ph-safari-plugin-umg / bug 9k9) plus
+# other structural JS errors. No devDependency needed -- npx fetches
+# TypeScript on demand; must use `-p typescript` since bare `npx tsc`
+# resolves to an unrelated, deprecated `tsc` npm package.
+npx -p typescript tsc -p scripts/tsconfig.extension.json
 ```
 
 ## Architecture Overview

@@ -199,7 +199,10 @@
   function wireDomainLists() {
     for (const cfg of LISTS) {
       const form = document.getElementById(cfg.formId);
-      const input = document.getElementById(cfg.inputId);
+      // JSDoc-cast to HTMLInputElement (not just HTMLElement) only so the
+      // tsc --checkJs gate (bead archive-ph-safari-plugin-umg) can see
+      // `.value` below; does not change runtime behavior.
+      const input = /** @type {HTMLInputElement | null} */ (document.getElementById(cfg.inputId));
       if (!form || !input) continue;
 
       form.addEventListener("submit", (event) => {
@@ -215,7 +218,12 @@
   }
 
   function wireNewTabCheckbox() {
-    const checkbox = document.getElementById("new-tab-checkbox");
+    // JSDoc-cast to HTMLInputElement (not just HTMLElement) only so the
+    // tsc --checkJs gate (bead archive-ph-safari-plugin-umg) can see
+    // `.checked` below; does not change runtime behavior.
+    const checkbox = /** @type {HTMLInputElement | null} */ (
+      document.getElementById("new-tab-checkbox")
+    );
     if (!checkbox) return;
 
     api.storage.local.get("newTab").then((result) => {

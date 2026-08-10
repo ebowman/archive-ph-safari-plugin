@@ -10,7 +10,12 @@ const api = typeof browser !== "undefined" ? browser : chrome;
 // Mirror domains in order of preference; archive.ph is tried first since
 // it's the canonical/most commonly used mirror. Lives in archive-url.js so
 // the settings page and background script share one source of truth.
-const MIRRORS = ArchiveUrl.MIRRORS;
+// Referenced directly as ArchiveUrl.MIRRORS below (not aliased to a local
+// const) because Safari loads archive-url.js and background.js as sibling
+// <script> tags sharing one top-level lexical scope; a same-named top-level
+// const here would collide with archive-url.js's own `const MIRRORS` and
+// throw "Can't create duplicate variable", killing the whole background
+// page (see bead 9k9).
 
 // Returns true if the origin responds to an HTTP HEAD request at all, even
 // with an error status (e.g. 429/503) -- that still means the host is up.
@@ -29,12 +34,12 @@ async function reachable(origin) {
 // reachable one. If none are reachable, falls back to the first mirror
 // (archive.ph) so a tab is still opened rather than doing nothing.
 async function pickMirror() {
-  for (const mirror of MIRRORS) {
+  for (const mirror of ArchiveUrl.MIRRORS) {
     if (await reachable(mirror)) {
       return mirror;
     }
   }
-  return MIRRORS[0];
+  return ArchiveUrl.MIRRORS[0];
 }
 
 // Reads the "open in a new tab" preference from storage.local, defaulting
@@ -84,6 +89,15 @@ async function navigateAndRecord(destUrl, overrideUrl, { tabId, useNewTab }) {
 // an archive of a *different* URL (the link's target, not the page itself).
 // Records a manual override for the tab that ends up displaying the
 // archive, keyed by the *original* rawUrl's domain (see manualOverrides).
+// JSDoc-typed only so the tsc --checkJs gate (bead
+// archive-ph-safari-plugin-umg) can see `tabId` on the destructured param;
+// does not change runtime behavior.
+/**
+ * @param {string} rawUrl
+ * @param {object} [options]
+ * @param {number} [options.tabId]
+ * @param {boolean} [options.forceNewTab]
+ */
 async function openArchive(rawUrl, { tabId, forceNewTab = false } = {}) {
   if (!rawUrl) return;
   if (!isHttpUrl(rawUrl)) return;
@@ -168,6 +182,14 @@ globalThis.hasManualOverride = hasManualOverride;
 // original article URL, honoring the existing newTab setting the same way
 // openArchive does. Records the manual override against whichever tab ends
 // up displaying the original (the reused tab, or the freshly created one).
+// JSDoc-typed only so the tsc --checkJs gate (bead
+// archive-ph-safari-plugin-umg) can see `tabId` on the destructured param;
+// does not change runtime behavior.
+/**
+ * @param {string} originalUrl
+ * @param {object} [options]
+ * @param {number} [options.tabId]
+ */
 async function deArchive(originalUrl, { tabId } = {}) {
   // extractOriginalUrl's contract guarantees an http(s) scheme, but guard
   // anyway before navigating, mirroring openArchive's own check.
@@ -326,8 +348,8 @@ async function applyAutoRedirectRules(tabId, url) {
   }
 
   // Archive rule: a normal page on a domain the user always wants archived
-  // -> redirect to its archive.ph "newest" URL. Uses MIRRORS[0] (archive.ph)
-  // directly rather than pickMirror(): pickMirror's sequential HEAD probes
+  // -> redirect to its archive.ph "newest" URL. Uses ArchiveUrl.MIRRORS[0]
+  // (archive.ph) directly rather than pickMirror(): pickMirror's sequential HEAD probes
   // across up to 7 mirrors are fine for a single deliberate click, but far
   // too slow/chatty to run on every navigation event in a listed domain;
   // the manual toolbar-click path (openArchive) keeps pickMirror.
