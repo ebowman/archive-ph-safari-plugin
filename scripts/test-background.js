@@ -191,22 +191,22 @@ function loadBackground({
   sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
 
-  // Both files declare top-level `const`/`function` bindings (e.g. MIRRORS
-  // in both, `api` in background.js) that would collide as duplicate
-  // lexical declarations if run as two top-level scripts in the same vm
-  // context (Safari avoids this by giving each <script> tag its own
-  // top-level scope, which vm.runInContext does not do across separate
-  // calls). Wrapping each in an IIFE isolates its lexical scope the same
-  // way; both files already communicate solely via explicit
-  // `globalThis.X = ...` assignments (ArchiveUrl, recordManualOverride,
-  // hasManualOverride), so this doesn't change observable behavior.
+  // Loaded RAW (no wrapping) into one shared vm context, exactly like
+  // Safari's background page: manifest.json's background.scripts lists
+  // archive-url.js then background.js as sequential <script> tags, and
+  // Safari's MV3 background page runs them in ONE shared top-level lexical
+  // scope (unlike vm.runInContext calls, which would otherwise each get
+  // their own scope if wrapped -- that wrapping previously masked a
+  // duplicate-top-level-declaration collision; see bead 9k9). archive-url.js
+  // is now itself IIFE-wrapped internally (only globalThis.ArchiveUrl
+  // escapes it), so it and background.js can safely share this scope.
   const archiveUrlSource = fs.readFileSync(ARCHIVE_URL_PATH, "utf8");
-  vm.runInContext(`(function(){\n${archiveUrlSource}\n})();`, sandbox, {
+  vm.runInContext(archiveUrlSource, sandbox, {
     filename: ARCHIVE_URL_PATH,
   });
 
   const backgroundSource = fs.readFileSync(BACKGROUND_PATH, "utf8");
-  vm.runInContext(`(function(){\n${backgroundSource}\n})();`, sandbox, {
+  vm.runInContext(backgroundSource, sandbox, {
     filename: BACKGROUND_PATH,
   });
 
@@ -221,6 +221,38 @@ async function flush() {
   // in background.js (pickMirror -> shouldUseNewTab -> tabs.create/update).
   for (let i = 0; i < 10; i++) {
     await Promise.resolve();
+  }
+}
+
+// --- (0) shared-scope load: archive-url.js then background.js RAW into one
+//     fresh vm context must not throw ---------------------------------------
+//
+// Guards against exactly the bead 9k9 regression: Safari's background page
+// loads manifest.json's background.scripts (archive-url.js, background.js)
+// as sequential <script> tags sharing ONE top-level lexical scope. If either
+// file (or a future edit to either) reintroduces a top-level const/let/
+// function/class name that also exists top-level in the other, this raw
+// load throws "SyntaxError: Can't create duplicate variable" and the whole
+// background page dies. loadBackground() above already loads both files raw
+// (no per-file IIFE wrapping) for every case in this suite, so any such
+// collision would surface here as a thrown exception during
+// vm.runInContext, not just in this dedicated case -- this case exists to
+// name the invariant explicitly and fail with a clear message if the raw
+// load ever throws.
+function testSharedScopeLoadDoesNotThrow() {
+  let threw = null;
+  try {
+    loadBackground({});
+  } catch (e) {
+    threw = e;
+  }
+  check(
+    "(0) archive-url.js + background.js load raw into one shared scope without throwing",
+    threw === null,
+    true
+  );
+  if (threw) {
+    console.log(`  threw: ${threw.stack || threw}`);
   }
 }
 
@@ -1047,6 +1079,8 @@ async function testOnRemovedClearsSnapshotOriginal() {
 // --- run all cases ---------------------------------------------------------
 
 async function main() {
+  testSharedScopeLoadDoesNotThrow();
+
   await testNormalPageDefaultNewTab();
   await testDeArchiveSameTab();
   await testDeArchiveNewTab();
