@@ -15,6 +15,45 @@
       Links opened via the right-click menu always open in a new tab.
     </p>
   </form>
+
+  <section class="domain-list-section" id="always-archive-section">
+    <h2>Always open via archive.ph</h2>
+    <p class="hint">Sites you don't pay for.</p>
+    <form id="always-archive-form" class="domain-list-form">
+      <input
+        type="text"
+        id="always-archive-input"
+        placeholder="example.com"
+        autocomplete="off"
+      />
+      <button type="submit">Add</button>
+    </form>
+    <p class="error-message" id="always-archive-error" hidden></p>
+    <p class="notice-message" id="always-archive-notice" hidden></p>
+    <ul class="domain-list" id="always-archive-list"></ul>
+  </section>
+
+  <section class="domain-list-section" id="always-original-section">
+    <h2>Always open the original site</h2>
+    <p class="hint">
+      Sites you pay for — archive.ph links to these get un-archived
+      automatically once the redirect engine lands.
+    </p>
+    <form id="always-original-form" class="domain-list-form">
+      <input
+        type="text"
+        id="always-original-input"
+        placeholder="example.com"
+        autocomplete="off"
+      />
+      <button type="submit">Add</button>
+    </form>
+    <p class="error-message" id="always-original-error" hidden></p>
+    <p class="notice-message" id="always-original-notice" hidden></p>
+    <ul class="domain-list" id="always-original-list"></ul>
+  </section>
+
+  <script src="../archive-url.js"></script>
   <script src="settings.js"></script>
 </body>
 </html>

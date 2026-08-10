@@ -18,6 +18,8 @@
 		9466332A3027353C00A64009 /* Archive.ph Opener Extension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 946633293027353C00A64009 /* Archive.ph Opener Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		9466332F3027353C00A64009 /* SafariWebExtensionHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9466332E3027353C00A64009 /* SafariWebExtensionHandler.swift */; };
 		9466333E3027353C00A64009 /* background.js in Resources */ = {isa = PBXBuildFile; fileRef = 9466333B3027353C00A64009 /* background.js */; };
+		946633441027353C00A64009 /* archive-url.js in Resources */ = {isa = PBXBuildFile; fileRef = 946633431027353C00A64009 /* archive-url.js */; };
+		946633451027353C00A64009 /* snapshot-probe.js in Resources */ = {isa = PBXBuildFile; fileRef = 946633461027353C00A64009 /* snapshot-probe.js */; };
 		9466333F3027353C00A64009 /* images in Resources */ = {isa = PBXBuildFile; fileRef = 9466333C3027353C00A64009 /* images */; };
 		946633403027353C00A64009 /* manifest.json in Resources */ = {isa = PBXBuildFile; fileRef = 9466333D3027353C00A64009 /* manifest.json */; };
 		946633413027353C00A64009 /* settings in Resources */ = {isa = PBXBuildFile; fileRef = 946633423027353C00A64009 /* settings */; };
@@ -62,6 +64,8 @@
 		9466332E3027353C00A64009 /* SafariWebExtensionHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafariWebExtensionHandler.swift; sourceTree = "<group>"; };
 		946633303027353C00A64009 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		9466333B3027353C00A64009 /* background.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = background.js; path = ../../../extension/background.js; sourceTree = "<group>"; };
+		946633431027353C00A64009 /* archive-url.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = "archive-url.js"; path = "../../../extension/archive-url.js"; sourceTree = "<group>"; };
+		946633461027353C00A64009 /* snapshot-probe.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = "snapshot-probe.js"; path = "../../../extension/snapshot-probe.js"; sourceTree = "<group>"; };
 		9466333C3027353C00A64009 /* images */ = {isa = PBXFileReference; lastKnownFileType = folder; name = images; path = ../../../extension/images; sourceTree = "<group>"; };
 		9466333D3027353C00A64009 /* manifest.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = manifest.json; path = ../../../extension/manifest.json; sourceTree = "<group>"; };
 		946633423027353C00A64009 /* settings */ = {isa = PBXFileReference; lastKnownFileType = folder; name = settings; path = ../../../extension/settings; sourceTree = "<group>"; };
@@ -140,6 +144,8 @@
 		9466333A3027353C00A64009 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				946633431027353C00A64009 /* archive-url.js */,
+				946633461027353C00A64009 /* snapshot-probe.js */,
 				9466333B3027353C00A64009 /* background.js */,
 				9466333C3027353C00A64009 /* images */,
 				9466333D3027353C00A64009 /* manifest.json */,
@@ -251,6 +257,8 @@
 				9466333F3027353C00A64009 /* images in Resources */,
 				946633403027353C00A64009 /* manifest.json in Resources */,
 				9466333E3027353C00A64009 /* background.js in Resources */,
+				946633441027353C00A64009 /* archive-url.js in Resources */,
+				946633451027353C00A64009 /* snapshot-probe.js in Resources */,
 				946633413027353C00A64009 /* settings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

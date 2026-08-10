@@ -20,6 +20,101 @@ label {
   font-size: 12px;
 }
 
+.domain-list-section {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #d2d2d7;
+}
+
+.domain-list-section h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.domain-list-section .hint {
+  margin: 4px 0 0 0;
+}
+
+.domain-list-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0 0 0;
+}
+
+.domain-list-form input[type="text"] {
+  flex: 1;
+  font: inherit;
+  color: inherit;
+  background: #ffffff;
+  border: 1px solid #d2d2d7;
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+
+.domain-list-form button {
+  font: inherit;
+  padding: 6px 12px;
+  border: 1px solid #d2d2d7;
+  border-radius: 6px;
+  background: #f5f5f7;
+  color: inherit;
+  cursor: pointer;
+}
+
+.domain-list-form button:hover {
+  background: #e8e8ed;
+}
+
+.error-message {
+  margin: 8px 0 0 0;
+  color: #d70015;
+  font-size: 12px;
+}
+
+.notice-message {
+  margin: 8px 0 0 0;
+  color: #6e6e73;
+  font-size: 12px;
+  font-style: italic;
+}
+
+.domain-list {
+  list-style: none;
+  margin: 12px 0 0 0;
+  padding: 0;
+}
+
+.domain-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border-bottom: 1px solid #ececed;
+  font-size: 13px;
+}
+
+.domain-list li:first-child {
+  border-top: 1px solid #ececed;
+}
+
+.domain-list button.remove-entry {
+  font: inherit;
+  line-height: 1;
+  padding: 2px 8px;
+  border: 1px solid #d2d2d7;
+  border-radius: 6px;
+  background: #f5f5f7;
+  color: inherit;
+  cursor: pointer;
+}
+
+.domain-list button.remove-entry:hover {
+  background: #e8e8ed;
+}
+
 @media (prefers-color-scheme: dark) {
   body {
     color: #f5f5f7;
@@ -28,5 +123,44 @@ label {
 
   .hint {
     color: #a1a1a6;
+  }
+
+  .domain-list-section {
+    border-top-color: #3a3a3c;
+  }
+
+  .domain-list-form input[type="text"] {
+    background: #2c2c2e;
+    border-color: #3a3a3c;
+  }
+
+  .domain-list-form button {
+    background: #3a3a3c;
+    border-color: #48484a;
+  }
+
+  .domain-list-form button:hover {
+    background: #48484a;
+  }
+
+  .notice-message {
+    color: #a1a1a6;
+  }
+
+  .domain-list li {
+    border-bottom-color: #3a3a3c;
+  }
+
+  .domain-list li:first-child {
+    border-top-color: #3a3a3c;
+  }
+
+  .domain-list button.remove-entry {
+    background: #3a3a3c;
+    border-color: #48484a;
+  }
+
+  .domain-list button.remove-entry:hover {
+    background: #48484a;
   }
 }
