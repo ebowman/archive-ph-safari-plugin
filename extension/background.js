@@ -89,6 +89,15 @@ async function navigateAndRecord(destUrl, overrideUrl, { tabId, useNewTab }) {
 // an archive of a *different* URL (the link's target, not the page itself).
 // Records a manual override for the tab that ends up displaying the
 // archive, keyed by the *original* rawUrl's domain (see manualOverrides).
+// JSDoc-typed only so the tsc --checkJs gate (bead
+// archive-ph-safari-plugin-umg) can see `tabId` on the destructured param;
+// does not change runtime behavior.
+/**
+ * @param {string} rawUrl
+ * @param {object} [options]
+ * @param {number} [options.tabId]
+ * @param {boolean} [options.forceNewTab]
+ */
 async function openArchive(rawUrl, { tabId, forceNewTab = false } = {}) {
   if (!rawUrl) return;
   if (!isHttpUrl(rawUrl)) return;
@@ -173,6 +182,14 @@ globalThis.hasManualOverride = hasManualOverride;
 // original article URL, honoring the existing newTab setting the same way
 // openArchive does. Records the manual override against whichever tab ends
 // up displaying the original (the reused tab, or the freshly created one).
+// JSDoc-typed only so the tsc --checkJs gate (bead
+// archive-ph-safari-plugin-umg) can see `tabId` on the destructured param;
+// does not change runtime behavior.
+/**
+ * @param {string} originalUrl
+ * @param {object} [options]
+ * @param {number} [options.tabId]
+ */
 async function deArchive(originalUrl, { tabId } = {}) {
   // extractOriginalUrl's contract guarantees an http(s) scheme, but guard
   // anyway before navigating, mirroring openArchive's own check.

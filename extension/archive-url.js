@@ -114,8 +114,11 @@ function normalizeDomain(input) {
   // Strip any path/query/hash by keeping only the authority segment.
   value = value.split(/[/?#]/)[0];
 
-  // Strip userinfo if present (e.g. "user@example.com").
-  value = value.split("@").pop();
+  // Strip userinfo if present (e.g. "user@example.com"). split() always
+  // returns a non-empty array so pop() can't actually be undefined here;
+  // the `?? value` fallback just satisfies the type checker (TS7 can't
+  // infer split()'s result is non-empty) without changing behavior.
+  value = value.split("@").pop() ?? value;
 
   // Strip a trailing port (e.g. "example.com:8080"), but not IPv6 brackets.
   if (!value.startsWith("[")) {
