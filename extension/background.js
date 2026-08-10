@@ -145,10 +145,6 @@ function hasManualOverride(tabId, rawUrl) {
   return false;
 }
 
-api.tabs.onRemoved.addListener((tabId) => {
-  manualOverrides.delete(tabId);
-});
-
 // Exposed on globalThis so bead 6kl.4's auto-redirect engine can call these
 // without a module system, and so scripts/test-background.js can assert
 // against the registry directly; nothing in this file reads them back off
@@ -189,6 +185,199 @@ api.action.onClicked.addListener((tab) => {
   }
 
   openArchiveSafe(tab.url, { tabId: tab.id });
+});
+
+// ---------------------------------------------------------------------------
+// Auto-redirect engine (bead 6kl.4)
+//
+// Watches navigations via tabs.onUpdated and applies the always-archive /
+// always-original domain lists configured on the settings page, without
+// fighting a manual toggle-click (see hasManualOverride above) or looping
+// on its own redirects (see the engine-initiated marker below).
+// ---------------------------------------------------------------------------
+
+// Per-tab marker recording the URL the engine itself just navigated a tab
+// to, so the tabs.onUpdated listener can recognize its own redirect and not
+// re-evaluate the rules against it. Populated immediately before each
+// engine-initiated tabs.update, consumed (deleted) the first time
+// onUpdated reports a matching changeInfo.url for that tab, and cleared on
+// tabs.onRemoved alongside manualOverrides (see the shared listener below).
+//
+// Exact-match tradeoff: archive.ph itself may internally redirect the tab
+// through further URL changes after we land it on our target (e.g. its own
+// "wip" -> permanent snapshot transition), which would arrive as additional
+// onUpdated events that no longer equal the recorded marker exactly. A
+// prefix match would catch those too, but risks false positives (matching
+// an unrelated URL that happens to share a prefix, e.g. a query-string
+// variant of a completely different page). We accept the exact-match's
+// narrower coverage -- worst case a rare follow-up redirect is briefly
+// re-evaluated by the rules below, which is not fought since domain-list
+// mutual exclusivity plus this same marker mechanism keep it from
+// looping (see the loop analysis at the bottom of this section).
+const engineMarkers = new Map();
+
+// Records that tabId is about to be navigated by the engine itself to
+// targetUrl, so the onUpdated listener below can consume-and-ignore the
+// resulting event instead of treating it as a fresh user navigation.
+function markEngineNavigation(tabId, targetUrl) {
+  if (tabId === undefined || tabId === null) return;
+  engineMarkers.set(tabId, targetUrl);
+}
+
+// Shared cleanup: both the manual-override registry and the engine-marker
+// map are keyed by tab id and become stale the moment a tab closes.
+api.tabs.onRemoved.addListener((tabId) => {
+  manualOverrides.delete(tabId);
+  engineMarkers.delete(tabId);
+});
+
+// Reads a domain list from storage.local, returning [] on a missing key,
+// a non-array value, or a rejected read (e.g. storage unavailable in some
+// embedding) -- the engine must never throw or block navigation on a
+// storage hiccup.
+async function readDomainList(key) {
+  if (!api.storage || !api.storage.local) return [];
+  try {
+    const result = await api.storage.local.get(key);
+    return Array.isArray(result[key]) ? result[key] : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+// Returns true if rawUrl's host matches (exactly or as a subdomain of) any
+// entry in domains.
+function matchesAnyDomain(rawUrl, domains) {
+  return domains.some((domain) => ArchiveUrl.urlMatchesDomain(rawUrl, domain));
+}
+
+// Applies the de-archive and archive rules to a single tabs.onUpdated
+// navigation event. Both rules read fresh storage.local state each call
+// (no caching layer in this bead -- storage.local reads are cheap and the
+// lists change rarely, so staleness is a bigger risk than the extra read).
+async function applyAutoRedirectRules(tabId, url) {
+  const [alwaysArchiveDomains, alwaysOriginalDomains] = await Promise.all([
+    readDomainList("alwaysArchiveDomains"),
+    readDomainList("alwaysOriginalDomains"),
+  ]);
+
+  if (ArchiveUrl.isArchiveUrl(url)) {
+    // De-archive rule: an archive URL whose embedded original belongs to a
+    // domain the user always wants to read directly -> bounce to the
+    // original. Always same tab: this is an automatic redirect *correction*
+    // (undoing a redirect the user or a link pushed them into), not a user
+    // action opening a fresh archive, so the newTab setting -- which only
+    // governs user-initiated archive/de-archive actions -- deliberately
+    // does not apply here.
+    const original = ArchiveUrl.extractOriginalUrl(url);
+    if (!original) return;
+    if (!matchesAnyDomain(original, alwaysOriginalDomains)) return;
+    // Defensive: if the original's domain is ALSO on alwaysArchiveDomains
+    // (should be impossible given 6kl.3's mutual-exclusivity enforcement,
+    // but storage can be hand-edited or corrupted), refuse to fire rather
+    // than redirect to a page rule (b) would immediately archive again.
+    if (matchesAnyDomain(original, alwaysArchiveDomains)) return;
+
+    markEngineNavigation(tabId, original);
+    api.tabs.update(tabId, { url: original });
+    return;
+  }
+
+  // Archive rule: a normal page on a domain the user always wants archived
+  // -> redirect to its archive.ph "newest" URL. Uses MIRRORS[0] (archive.ph)
+  // directly rather than pickMirror(): pickMirror's sequential HEAD probes
+  // across up to 7 mirrors are fine for a single deliberate click, but far
+  // too slow/chatty to run on every navigation event in a listed domain;
+  // the manual toolbar-click path (openArchive) keeps pickMirror.
+  if (!matchesAnyDomain(url, alwaysArchiveDomains)) return;
+
+  // Defensive (6kl.3 review finding): the settings page accepts archive.ph
+  // / mirror hosts as list entries since the lists are inert there. Here
+  // they are not inert, so guard against a mirror host ending up in
+  // alwaysArchiveDomains -- naively archiving it would target the archive
+  // site itself. The produced URL would still be recognized as an archive
+  // URL by isArchiveUrl, so rule (b) would not fire again on the next
+  // event, but it would still waste a redirect and send the user to a
+  // nonsensical "archive of archive.ph" page. Skip any matching mirror host
+  // entirely.
+  const archivesAMirror = alwaysArchiveDomains.some((domain) =>
+    ArchiveUrl.MIRRORS.some((mirror) => ArchiveUrl.urlMatchesDomain(mirror, domain))
+  );
+  if (archivesAMirror && matchesAnyDomain(url, alwaysArchiveDomains)) {
+    // Re-check with mirror entries excluded: a list can legitimately
+    // contain both a mirror host (to be ignored) and real article domains
+    // (to be honored), so only skip when url's OWN matching domain is
+    // itself a mirror host, not the whole rule for the whole list.
+    const nonMirrorDomains = alwaysArchiveDomains.filter(
+      (domain) => !ArchiveUrl.MIRRORS.some((mirror) => ArchiveUrl.urlMatchesDomain(mirror, domain))
+    );
+    if (!matchesAnyDomain(url, nonMirrorDomains)) return;
+  }
+
+  const archiveUrl = ArchiveUrl.buildArchiveUrl(ArchiveUrl.MIRRORS[0], url);
+  markEngineNavigation(tabId, archiveUrl);
+  api.tabs.update(tabId, { url: archiveUrl });
+}
+
+// Loop analysis (encoded here per bead 6kl.4's requirements):
+//
+// - Cross-rule A -> B -> A loops (e.g. rule (a) sends a tab to an original
+//   whose domain rule (b) would then immediately re-archive) are prevented
+//   structurally: 6kl.3 enforces that a domain can appear on at most one of
+//   alwaysArchiveDomains / alwaysOriginalDomains, so the domain that
+//   satisfied rule (a)'s alwaysOriginalDomains match cannot simultaneously
+//   satisfy rule (b)'s alwaysArchiveDomains match (barring the corrupted-
+//   storage case rule (a) additionally guards against above).
+// - Rule (b)'s own output can never re-trigger rule (b): its output is
+//   always an archive.ph URL (isArchiveUrl(archiveUrl) === true), and rule
+//   (b) only fires for !isArchiveUrl(url).
+// - Rule (b)'s output COULD in principle re-trigger rule (a) (it's an
+//   archive URL whose embedded original is the same listed domain) --
+//   except that domain is on alwaysArchiveDomains, not
+//   alwaysOriginalDomains, so rule (a)'s domain check fails; mutual
+//   exclusivity again closes the loop.
+// - Rule (a)'s output can never re-trigger rule (a): its output is a plain
+//   http(s) URL (the extracted original), and rule (a) only fires for
+//   isArchiveUrl(url).
+// - The engine-initiated marker (engineMarkers, above) is the belt-and-
+//   braces backstop for all of the above: even if list mutual exclusivity
+//   were ever violated (corrupted storage, a future bug), the very next
+//   onUpdated event the engine's own tabs.update produces is consumed by
+//   the marker check in the listener below and never reaches these rules,
+//   so at worst a loop is cut after one extra hop rather than looping
+//   indefinitely.
+
+api.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (!changeInfo || !changeInfo.url) return;
+  const url = changeInfo.url;
+
+  if (!isHttpUrl(url)) return;
+
+  // Manual-override guard: for an archive URL, the "domain" a user's manual
+  // toggle would have recorded is the extracted original's domain (that's
+  // what recordManualOverride stores for both archive and de-archive
+  // clicks -- see navigateAndRecord); for a normal URL, it's the URL's own
+  // domain. Use whichever is relevant so a manual de-archive click (which
+  // lands the tab on the plain original URL) is recognized by rule (a)'s
+  // *input* check too, even though by the time onUpdated fires for that
+  // landing the URL itself is no longer an archive URL.
+  const relevantUrl = ArchiveUrl.isArchiveUrl(url)
+    ? ArchiveUrl.extractOriginalUrl(url) || url
+    : url;
+  if (hasManualOverride(tabId, relevantUrl)) return;
+
+  // Engine-initiated marker guard: if this event is reporting the engine's
+  // own just-issued redirect landing, consume the marker and stop -- don't
+  // re-run the rules against a URL we produced ourselves.
+  if (engineMarkers.get(tabId) === url) {
+    engineMarkers.delete(tabId);
+    return;
+  }
+
+  applyAutoRedirectRules(tabId, url).catch(() => {
+    // Never let a storage or matching error surface as an unhandled
+    // rejection or block the navigation the browser is already performing.
+  });
 });
 
 const menus = api.contextMenus || api.menus;

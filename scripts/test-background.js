@@ -38,7 +38,16 @@ function assertTrue(name, condition) {
 // Builds a fresh mock `chrome` global for a single test case. newTabSetting
 // controls what storage.local.get("newTab") resolves to (undefined by
 // default, matching "unset" -> defaults to true per shouldUseNewTab).
-function makeMockChrome({ newTabSetting } = {}) {
+// alwaysArchiveDomains / alwaysOriginalDomains seed the auto-redirect
+// engine's domain lists (bead 6kl.4); storageGetShouldReject, when true,
+// makes every storage.local.get call reject (asserting the engine's
+// read-failure-is-empty-list contract in case (h)).
+function makeMockChrome({
+  newTabSetting,
+  alwaysArchiveDomains,
+  alwaysOriginalDomains,
+  storageGetShouldReject,
+} = {}) {
   let nextTabId = 100;
 
   const calls = {
@@ -49,6 +58,7 @@ function makeMockChrome({ newTabSetting } = {}) {
   let onClickedListener = null;
   let onRemovedListener = null;
   let menuOnClickedListener = null;
+  let onUpdatedListener = null;
   let createdMenu = null;
 
   const chromeMock = {
@@ -73,14 +83,32 @@ function makeMockChrome({ newTabSetting } = {}) {
           onRemovedListener = fn;
         },
       },
+      onUpdated: {
+        addListener(fn) {
+          onUpdatedListener = fn;
+        },
+      },
     },
     storage: {
       local: {
         get(key) {
+          if (storageGetShouldReject) {
+            return Promise.reject(new Error("storage unavailable"));
+          }
           if (key === "newTab") {
             return Promise.resolve(
               newTabSetting === undefined ? {} : { newTab: newTabSetting }
             );
+          }
+          if (key === "alwaysArchiveDomains") {
+            return Promise.resolve({
+              alwaysArchiveDomains: alwaysArchiveDomains || [],
+            });
+          }
+          if (key === "alwaysOriginalDomains") {
+            return Promise.resolve({
+              alwaysOriginalDomains: alwaysOriginalDomains || [],
+            });
           }
           return Promise.resolve({});
         },
@@ -108,6 +136,7 @@ function makeMockChrome({ newTabSetting } = {}) {
     getOnClickedListener: () => onClickedListener,
     getOnRemovedListener: () => onRemovedListener,
     getMenuOnClickedListener: () => menuOnClickedListener,
+    getOnUpdatedListener: () => onUpdatedListener,
     getCreatedMenu: () => createdMenu,
   };
 }
@@ -115,8 +144,18 @@ function makeMockChrome({ newTabSetting } = {}) {
 // Loads archive-url.js then background.js into one fresh vm context wired
 // to the given mock chrome global. Returns the harness handles plus the
 // sandbox (for globalThis inspection, unused today but handy for debugging).
-function loadBackground({ newTabSetting } = {}) {
-  const harness = makeMockChrome({ newTabSetting });
+function loadBackground({
+  newTabSetting,
+  alwaysArchiveDomains,
+  alwaysOriginalDomains,
+  storageGetShouldReject,
+} = {}) {
+  const harness = makeMockChrome({
+    newTabSetting,
+    alwaysArchiveDomains,
+    alwaysOriginalDomains,
+    storageGetShouldReject,
+  });
 
   const sandbox = {
     chrome: harness.chromeMock,
@@ -316,6 +355,85 @@ async function testOnRemovedClearsEntry() {
   );
 }
 
+// --- (g2) tabs.onRemoved also clears the engine-marker registry ----------
+//
+// DEVIATION NOTE (6kl.4 second fix pass, item 3): the STOPPED note's
+// suggested construction -- "trigger rule (b), replay that exact archive-URL
+// marker on a reused tab id, expect a rule to fire because the marker was
+// cleared" -- is structurally IMPOSSIBLE for any list configuration, proven
+// below, so it is not what this case does. Rule (b) only fires when
+// matchesAnyDomain(url, alwaysArchiveDomains) is true for the pre-archive
+// url, and its marker is exactly buildArchiveUrl(mirror0, url), whose
+// extracted original is that same url. Replaying the marker sends it through
+// rule (a)'s isArchiveUrl branch, which requires
+// matchesAnyDomain(original, alwaysOriginalDomains) true AND
+// matchesAnyDomain(original, alwaysArchiveDomains) false to fire -- but
+// rule (b) having fired already forces the second condition to be true
+// (original === url, and url matched alwaysArchiveDomains), so rule (a) can
+// never both match alwaysOriginalDomains and pass its own corrupted-storage
+// guard on a rule (b)-produced marker. The symmetric attempt (set the marker
+// via rule (a), replay it expecting rule (b) to fire) is contradictory for
+// the identical reason in the other direction. This is not a bug -- it's the
+// same list mutual-exclusivity invariant (l) documents, just reached from a
+// different starting rule.
+//
+// What IS achievable, and is what this case now does: use the NESTED
+// archive-of-archive construction from case (m), where the marker set by
+// rule (a)'s first hop is independently load-bearing (m proved this with
+// the tab kept alive). Here we additionally remove the tab between the
+// first hop and the replay: fire the nested URL on tab 60 (rule (a) peels
+// one layer, marker set to the once-unwrapped URL), remove tab 60 (must
+// clear engineMarkers[60]), then fire onUpdated with that EXACT marker url
+// on the reused tab id 60. If onRemoved had NOT cleared the marker, this
+// replay would be silently consumed (marker match) and the total would stay
+// at 1. Because removal must clear it, the url is evaluated fresh: it is
+// still an archive url, so rule (a) peels the SECOND layer and fires again,
+// making the total 2. This pins engineMarkers.delete in onRemoved as
+// independently observable -- mutation-verified in the report (removing
+// engineMarkers.delete from onRemoved's listener makes this case fail, total
+// stays at 1 instead of reaching 2).
+
+async function testOnRemovedClearsEngineMarker() {
+  const h = loadBackground({
+    alwaysOriginalDomains: ["example.com", "archive.ph"],
+    alwaysArchiveDomains: [],
+  });
+  const onUpdated = h.getOnUpdatedListener();
+  const onRemoved = h.getOnRemovedListener();
+
+  const nestedUrl =
+    "https://archive.ph/newest/https://archive.ph/newest/https://example.com/a";
+  onUpdated(60, { url: nestedUrl }, { id: 60, url: nestedUrl });
+  await flush();
+  check("(g2) rule (a) de-archives one layer, marker set", h.calls.tabsUpdate.length, 1);
+  const markerUrl = h.calls.tabsUpdate[0].url;
+  check(
+    "(g2) marker url is the once-unwrapped archive.ph url",
+    markerUrl,
+    "https://archive.ph/newest/https://example.com/a"
+  );
+
+  onRemoved(60);
+
+  // Replay the EXACT marker url on the SAME reused tabId. With a working
+  // onRemoved cleanup, the marker is gone, so this is evaluated fresh by
+  // rule (a) and peels the second layer -> a second tabs.update. With a
+  // stale (uncleared) marker, this would be silently swallowed and the
+  // count would stay at 1.
+  onUpdated(60, { url: markerUrl }, { id: 60, url: markerUrl });
+  await flush();
+  check(
+    "(g2) reused tabId's replay of the marker url is evaluated fresh, not swallowed (onRemoved cleared the marker)",
+    h.calls.tabsUpdate.length,
+    2
+  );
+  check(
+    "(g2) second update peels the remaining layer down to the plain original",
+    h.calls.tabsUpdate[1] && h.calls.tabsUpdate[1].url,
+    "https://example.com/a"
+  );
+}
+
 // --- (h) context-menu click on a link records override for the NEW tab ---
 
 async function testContextMenuLinkRecordsNewTabOverride() {
@@ -352,6 +470,355 @@ async function testContextMenuLinkRecordsNewTabOverride() {
   );
 }
 
+// --- Auto-redirect engine (bead 6kl.4) ------------------------------------
+//
+// Drives the REAL api.tabs.onUpdated listener background.js registers,
+// against a mock storage.local seeded with the domain lists. Fires the
+// captured listener manually with (tabId, {url}, tab) the way the browser
+// would on a navigation's URL-changing event.
+
+// --- (a) nav to always-archive domain -> tabs.update to archive.ph -------
+
+async function testEngineArchivesListedDomain() {
+  const h = loadBackground({ alwaysArchiveDomains: ["example.com"] });
+  const onUpdated = h.getOnUpdatedListener();
+
+  onUpdated(1, { url: "https://example.com/article" }, { id: 1, url: "https://example.com/article" });
+  await flush();
+
+  check("(engine-a) tabs.update called once", h.calls.tabsUpdate.length, 1);
+  check("(engine-a) tabs.update targets same tab", h.calls.tabsUpdate[0] && h.calls.tabsUpdate[0].tabId, 1);
+  check(
+    "(engine-a) tabs.update url is archive.ph/newest/<url>",
+    h.calls.tabsUpdate[0] && h.calls.tabsUpdate[0].url,
+    "https://archive.ph/newest/https://example.com/article"
+  );
+  check("(engine-a) tabs.create not called", h.calls.tabsCreate.length, 0);
+}
+
+// --- (b) nav to archive URL of always-original domain -> tabs.update to
+//     original, same tab even when newTab=true in storage -----------------
+
+async function testEngineDeArchivesListedDomainIgnoresNewTab() {
+  const h = loadBackground({
+    alwaysOriginalDomains: ["news.example"],
+    newTabSetting: true,
+  });
+  const onUpdated = h.getOnUpdatedListener();
+
+  const archiveUrl = "https://archive.ph/AbC12/https://news.example/story";
+  onUpdated(2, { url: archiveUrl }, { id: 2, url: archiveUrl });
+  await flush();
+
+  check("(engine-b) tabs.update called once", h.calls.tabsUpdate.length, 1);
+  check("(engine-b) tabs.update targets same tab despite newTab=true", h.calls.tabsUpdate[0] && h.calls.tabsUpdate[0].tabId, 2);
+  check(
+    "(engine-b) tabs.update url is the original",
+    h.calls.tabsUpdate[0] && h.calls.tabsUpdate[0].url,
+    "https://news.example/story"
+  );
+  check("(engine-b) tabs.create not called (newTab setting does not apply)", h.calls.tabsCreate.length, 0);
+}
+
+// --- (c) unlisted domain -> no calls ---------------------------------------
+
+async function testEngineIgnoresUnlistedDomain() {
+  const h = loadBackground({ alwaysArchiveDomains: ["example.com"] });
+  const onUpdated = h.getOnUpdatedListener();
+
+  onUpdated(3, { url: "https://unlisted.test/page" }, { id: 3, url: "https://unlisted.test/page" });
+  await flush();
+
+  check("(engine-c) tabs.update not called", h.calls.tabsUpdate.length, 0);
+  check("(engine-c) tabs.create not called", h.calls.tabsCreate.length, 0);
+}
+
+// --- (d) archive URL of an UNLISTED original -> no calls -------------------
+
+async function testEngineIgnoresArchiveOfUnlistedOriginal() {
+  const h = loadBackground({ alwaysOriginalDomains: ["news.example"] });
+  const onUpdated = h.getOnUpdatedListener();
+
+  const archiveUrl = "https://archive.ph/AbC12/https://unlisted.test/story";
+  onUpdated(4, { url: archiveUrl }, { id: 4, url: archiveUrl });
+  await flush();
+
+  check("(engine-d) tabs.update not called", h.calls.tabsUpdate.length, 0);
+  check("(engine-d) tabs.create not called", h.calls.tabsCreate.length, 0);
+}
+
+// --- (e) manual-override precedence: toolbar de-archive click on an
+//     always-archive domain's archive page (records override), then
+//     onUpdated for the resulting original URL must NOT bounce it back ----
+
+async function testEngineRespectsManualOverride() {
+  const h = loadBackground({
+    alwaysArchiveDomains: ["example.com"],
+    newTabSetting: false,
+  });
+  const onClicked = h.getOnClickedListener();
+  const onUpdated = h.getOnUpdatedListener();
+
+  // Simulate the user manually de-archiving via the toolbar toggle.
+  const archiveUrl = "https://archive.ph/AbC12/https://example.com/article";
+  onClicked({ id: 5, url: archiveUrl });
+  await flush();
+
+  check("(engine-e) manual de-archive click updates tab", h.calls.tabsUpdate.length, 1);
+  check(
+    "(engine-e) manual de-archive lands on original",
+    h.calls.tabsUpdate[0] && h.calls.tabsUpdate[0].url,
+    "https://example.com/article"
+  );
+
+  // Browser now reports the navigation onUpdated fired for -- the engine
+  // must recognize the manual override and NOT re-archive it.
+  onUpdated(5, { url: "https://example.com/article" }, { id: 5, url: "https://example.com/article" });
+  await flush();
+
+  check(
+    "(engine-e) engine does not bounce a manually-overridden nav back to archive",
+    h.calls.tabsUpdate.length,
+    1
+  );
+  check("(engine-e) tabs.create still not called", h.calls.tabsCreate.length, 0);
+}
+
+// --- (f) engine-marker: after rule-b redirect, firing onUpdated with the
+//     engine's own target URL must not cause a second update (marker
+//     consumed); a SUBSEQUENT identical nav (marker gone) DOES redirect
+//     again -------------------------------------------------------------
+
+async function testEngineMarkerConsumedOnce() {
+  const h = loadBackground({ alwaysArchiveDomains: ["example.com"] });
+  const onUpdated = h.getOnUpdatedListener();
+
+  onUpdated(6, { url: "https://example.com/article" }, { id: 6, url: "https://example.com/article" });
+  await flush();
+
+  check("(engine-f) first nav triggers one redirect", h.calls.tabsUpdate.length, 1);
+  const targetUrl = h.calls.tabsUpdate[0].url;
+
+  // Browser reports the engine's own redirect landing -- marker should
+  // consume this and NOT trigger a second update.
+  onUpdated(6, { url: targetUrl }, { id: 6, url: targetUrl });
+  await flush();
+
+  check("(engine-f) engine's own redirect landing does not re-trigger", h.calls.tabsUpdate.length, 1);
+
+  // A later, separate nav back to the same original URL (marker already
+  // consumed above) DOES get redirected again -- the marker is one-shot,
+  // not a permanent suppression.
+  onUpdated(6, { url: "https://example.com/article" }, { id: 6, url: "https://example.com/article" });
+  await flush();
+
+  check("(engine-f) subsequent identical nav redirects again (marker was consumed)", h.calls.tabsUpdate.length, 2);
+  check(
+    "(engine-f) second redirect url matches the first",
+    h.calls.tabsUpdate[1] && h.calls.tabsUpdate[1].url,
+    targetUrl
+  );
+}
+
+// --- (g) mirrors in alwaysArchiveDomains are skipped ------------------------
+//
+// Uses a mirror SUBDOMAIN (sub.archive.ph) rather than archive.ph itself:
+// isArchiveUrl is false for a mirror subdomain (MIRROR_HOSTS only lists the
+// bare mirror hosts), so this nav does NOT take the de-archive branch --
+// it reaches the archive rule, where urlMatchesDomain("archive.ph") still
+// matches the subdomain. The mirror-host guard in the archive rule is the
+// only thing preventing an archive-the-archive redirect here.
+
+async function testEngineSkipsMirrorHostInArchiveList() {
+  const h = loadBackground({ alwaysArchiveDomains: ["archive.ph"] });
+  const onUpdated = h.getOnUpdatedListener();
+
+  onUpdated(
+    7,
+    { url: "https://sub.archive.ph/page" },
+    { id: 7, url: "https://sub.archive.ph/page" }
+  );
+  await flush();
+
+  check("(engine-g) mirror subdomain nav NOT archived", h.calls.tabsUpdate.length, 0);
+  check("(engine-g) tabs.create not called either", h.calls.tabsCreate.length, 0);
+}
+
+// --- (h) storage.get rejecting -> no calls, no unhandled rejection --------
+
+async function testEngineStorageRejectionIsSafe() {
+  const h = loadBackground({ storageGetShouldReject: true });
+  const onUpdated = h.getOnUpdatedListener();
+
+  onUpdated(8, { url: "https://example.com/article" }, { id: 8, url: "https://example.com/article" });
+  await flush();
+
+  check("(engine-h) tabs.update not called on storage rejection", h.calls.tabsUpdate.length, 0);
+  check("(engine-h) tabs.create not called on storage rejection", h.calls.tabsCreate.length, 0);
+}
+
+// --- (i) non-http scheme -> no calls ----------------------------------------
+
+async function testEngineIgnoresNonHttpScheme() {
+  const h = loadBackground({ alwaysArchiveDomains: ["example.com"] });
+  const onUpdated = h.getOnUpdatedListener();
+
+  onUpdated(9, { url: "about:blank" }, { id: 9, url: "about:blank" });
+  await flush();
+
+  check("(engine-i) tabs.update not called for non-http scheme", h.calls.tabsUpdate.length, 0);
+  check("(engine-i) tabs.create not called for non-http scheme", h.calls.tabsCreate.length, 0);
+}
+
+// --- (j) subdomain matching: sub.example.com redirects when example.com is
+//     listed -----------------------------------------------------------
+
+async function testEngineMatchesSubdomain() {
+  const h = loadBackground({ alwaysArchiveDomains: ["example.com"] });
+  const onUpdated = h.getOnUpdatedListener();
+
+  onUpdated(10, { url: "https://sub.example.com/page" }, { id: 10, url: "https://sub.example.com/page" });
+  await flush();
+
+  check("(engine-j) subdomain nav triggers archive redirect", h.calls.tabsUpdate.length, 1);
+  check(
+    "(engine-j) redirect url archives the subdomain url",
+    h.calls.tabsUpdate[0] && h.calls.tabsUpdate[0].url,
+    "https://archive.ph/newest/https://sub.example.com/page"
+  );
+}
+
+// --- (k) loop-drill: domain on alwaysOriginalDomains, fire archive URL ->
+//     update to original; fire the original nav (engine marker) -> consumed,
+//     no further update --------------------------------------------------
+
+async function testEngineLoopDrillDeArchiveMarker() {
+  const h = loadBackground({ alwaysOriginalDomains: ["news.example"] });
+  const onUpdated = h.getOnUpdatedListener();
+
+  const archiveUrl = "https://archive.ph/AbC12/https://news.example/story";
+  onUpdated(11, { url: archiveUrl }, { id: 11, url: archiveUrl });
+  await flush();
+
+  check("(engine-k) de-archive rule fires once", h.calls.tabsUpdate.length, 1);
+  const originalUrl = h.calls.tabsUpdate[0].url;
+  check("(engine-k) redirected to original", originalUrl, "https://news.example/story");
+
+  // Browser reports the engine's own redirect landing.
+  onUpdated(11, { url: originalUrl }, { id: 11, url: originalUrl });
+  await flush();
+
+  check("(engine-k) engine's own de-archive landing does not re-trigger", h.calls.tabsUpdate.length, 1);
+}
+
+// --- (l) corrupted storage, NON-NESTED case: domain on BOTH lists -- rule
+//     (a)'s own corrupted-storage guard (not the engine marker) is what
+//     prevents a second update when the engine's own archive-URL landing is
+//     replayed. This scopes the claim to exactly what this case covers: a
+//     single-layer archive URL whose extracted original's domain is on both
+//     lists, so rule (a)'s defensive "original also on alwaysArchiveDomains"
+//     check independently subsumes the marker here. This does NOT generalize
+//     to every scenario -- case (m) below constructs a NESTED archive-of-
+//     archive sequence where the marker IS independently load-bearing (the
+//     rule-a guard does not subsume it there, because the second layer's
+//     extracted original lands on a domain that is on alwaysOriginalDomains
+//     and NOT on alwaysArchiveDomains, so the guard has nothing to block on).
+//     -----------------------------------------------------------------------
+
+async function testEngineCorruptedBothListsGuardedByRuleA() {
+  const h = loadBackground({
+    alwaysArchiveDomains: ["example.com"],
+    alwaysOriginalDomains: ["example.com"],
+  });
+  const onUpdated = h.getOnUpdatedListener();
+
+  // Plain nav to the both-listed domain -> rule (b) fires (archive rule
+  // runs first for non-archive URLs) and marks the engine navigation.
+  onUpdated(12, { url: "https://example.com/article" }, { id: 12, url: "https://example.com/article" });
+  await flush();
+
+  check("(engine-l) rule (b) fires once for both-listed domain", h.calls.tabsUpdate.length, 1);
+  const archiveUrl = h.calls.tabsUpdate[0].url;
+
+  // Browser reports the engine's own redirect landing on the archive URL.
+  // The marker guard consumes this. Even if it didn't, rule (a)'s own
+  // corrupted-storage guard (original's domain ALSO on alwaysArchiveDomains)
+  // independently returns before issuing a second tabs.update in THIS
+  // non-nested scenario -- verified by mutation-testing a throwaway copy
+  // with the marker-consume block removed, which produced the identical
+  // call count. This subsumption is specific to the single-layer,
+  // both-listed-domain case; it does not hold for the nested archive-of-
+  // archive sequence in case (m) below, where the marker is independently
+  // load-bearing.
+  onUpdated(12, { url: archiveUrl }, { id: 12, url: archiveUrl });
+  await flush();
+
+  check(
+    "(engine-l) no second update on the engine's own landing (marker and rule-a guard both hold)",
+    h.calls.tabsUpdate.length,
+    1
+  );
+}
+
+// --- (m) NESTED archive-of-archive: the engine marker IS independently
+//     load-bearing here, unlike case (l) above -----------------------------
+//
+// alwaysOriginalDomains = ["example.com", "archive.ph"], alwaysArchiveDomains
+// = []. Firing onUpdated with the doubly-nested URL
+// https://archive.ph/newest/https://archive.ph/newest/https://example.com/a
+// makes rule (a) de-archive ONE layer: extractOriginalUrl peels off the
+// outermost "https://archive.ph/newest/" wrapper, yielding
+// https://archive.ph/newest/https://example.com/a, whose host (archive.ph)
+// matches alwaysOriginalDomains and is NOT on alwaysArchiveDomains (empty),
+// so the corrupted-storage guard does not block -- tabs.update #1 fires and
+// the marker is set to that once-unwrapped URL.
+//
+// Replaying that landed URL (simulating the browser reporting the engine's
+// own navigation) must be swallowed by the marker. Without the marker, rule
+// (a) would evaluate it fresh: it is STILL an archive URL (host archive.ph),
+// so extractOriginalUrl peels the SECOND layer, yielding
+// https://example.com/a, whose domain (example.com) is on
+// alwaysOriginalDomains and NOT on alwaysArchiveDomains -- the
+// corrupted-storage guard has nothing to block on, so rule (a) would fire a
+// SECOND tabs.update. This is exactly the divergence case (l)'s guard could
+// not produce: here there is no both-listed domain for the guard to catch,
+// because each layer's host matches a *different* list entry. This is why
+// the marker is independently load-bearing for this sequence, unlike (l).
+
+async function testEngineMarkerLoadBearingOnNestedArchiveOfArchive() {
+  const h = loadBackground({
+    alwaysOriginalDomains: ["example.com", "archive.ph"],
+    alwaysArchiveDomains: [],
+  });
+  const onUpdated = h.getOnUpdatedListener();
+
+  const nestedUrl =
+    "https://archive.ph/newest/https://archive.ph/newest/https://example.com/a";
+  onUpdated(13, { url: nestedUrl }, { id: 13, url: nestedUrl });
+  await flush();
+
+  check("(engine-m) rule (a) de-archives one layer", h.calls.tabsUpdate.length, 1);
+  const onceUnwrapped = h.calls.tabsUpdate[0] && h.calls.tabsUpdate[0].url;
+  check(
+    "(engine-m) landed on the once-unwrapped archive.ph URL",
+    onceUnwrapped,
+    "https://archive.ph/newest/https://example.com/a"
+  );
+
+  // Browser reports the engine's own redirect landing. The marker must
+  // consume this; without it, rule (a) would peel the second layer and fire
+  // again (see the comment above for why the corrupted-storage guard does
+  // not catch this sequence the way it does in case (l)).
+  onUpdated(13, { url: onceUnwrapped }, { id: 13, url: onceUnwrapped });
+  await flush();
+
+  check(
+    "(engine-m) marker swallows the replayed landing; no second update",
+    h.calls.tabsUpdate.length,
+    1
+  );
+}
+
 // --- run all cases ---------------------------------------------------------
 
 async function main() {
@@ -362,7 +829,22 @@ async function main() {
   await testToggleRoundTrip();
   await testOverrideRegistry();
   await testOnRemovedClearsEntry();
+  await testOnRemovedClearsEngineMarker();
   await testContextMenuLinkRecordsNewTabOverride();
+
+  await testEngineArchivesListedDomain();
+  await testEngineDeArchivesListedDomainIgnoresNewTab();
+  await testEngineIgnoresUnlistedDomain();
+  await testEngineIgnoresArchiveOfUnlistedOriginal();
+  await testEngineRespectsManualOverride();
+  await testEngineMarkerConsumedOnce();
+  await testEngineSkipsMirrorHostInArchiveList();
+  await testEngineStorageRejectionIsSafe();
+  await testEngineIgnoresNonHttpScheme();
+  await testEngineMatchesSubdomain();
+  await testEngineLoopDrillDeArchiveMarker();
+  await testEngineCorruptedBothListsGuardedByRuleA();
+  await testEngineMarkerLoadBearingOnNestedArchiveOfArchive();
 
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed > 0 ? 1 : 0);
