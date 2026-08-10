@@ -108,6 +108,18 @@ function openArchiveSafe(rawUrl, options) {
 // it never fights a manual choice; nothing reads it yet in this bead.
 const manualOverrides = new Map();
 
+// Per-tab registry of original article URLs reported by the snapshot-probe
+// content script (bead 6kl.6) for bare short-code archive pages (e.g.
+// https://archive.is/f0rxt) whose tab URL never carries the embedded
+// original the way /newest/<url> forms do. Keyed by tab id, overwritten on
+// each new report for that tab (the probe re-runs per navigation), cleared
+// on tabs.onRemoved alongside manualOverrides/engineMarkers (see the shared
+// cleanup listener below). Consumed by (a) the toolbar toggle, as a
+// fallback when extractOriginalUrl(tab.url) is null, and (b) the
+// runtime.onMessage listener, which applies the same de-archive rule the
+// auto-redirect engine uses.
+const snapshotOriginals = new Map();
+
 // Normalizes rawUrl's host via ArchiveUrl.normalizeDomain, returning null
 // for unparseable input or hosts that don't normalize to a domain.
 function domainOf(rawUrl) {
@@ -176,10 +188,18 @@ api.action.onClicked.addListener((tab) => {
 
   if (ArchiveUrl.isArchiveUrl(tab.url)) {
     const original = ArchiveUrl.extractOriginalUrl(tab.url);
-    // Bare short-code archive URLs (mid-redirect, no embedded original)
-    // can't be de-archived; accepted limitation -- do nothing.
     if (original) {
       deArchiveSafe(original, { tabId: tab.id });
+      return;
+    }
+    // Bare short-code archive URLs (mid-redirect, no embedded original)
+    // have no URL-embedded original to fall back on; try the snapshot-probe
+    // registry (bead 6kl.6) before giving up -- the content script may
+    // already have reported the original it scraped from the page for this
+    // tab.
+    const reported = snapshotOriginals.get(tab.id);
+    if (reported) {
+      deArchiveSafe(reported, { tabId: tab.id });
     }
     return;
   }
@@ -224,11 +244,13 @@ function markEngineNavigation(tabId, targetUrl) {
   engineMarkers.set(tabId, targetUrl);
 }
 
-// Shared cleanup: both the manual-override registry and the engine-marker
-// map are keyed by tab id and become stale the moment a tab closes.
+// Shared cleanup: the manual-override registry, the engine-marker map, and
+// the snapshot-probe registry are all keyed by tab id and become stale the
+// moment a tab closes.
 api.tabs.onRemoved.addListener((tabId) => {
   manualOverrides.delete(tabId);
   engineMarkers.delete(tabId);
+  snapshotOriginals.delete(tabId);
 });
 
 // Reads a domain list from storage.local, returning [] on a missing key,
@@ -251,6 +273,35 @@ function matchesAnyDomain(rawUrl, domains) {
   return domains.some((domain) => ArchiveUrl.urlMatchesDomain(rawUrl, domain));
 }
 
+// Shared de-archive decision, used by both the tabs.onUpdated engine (rule
+// (a) below, for archive URLs whose original is embedded in the tab URL)
+// and the snapshot-probe message path (bead 6kl.6, for bare short-code
+// pages where the original was reported out-of-band by a content script).
+// Applies the same three checks either caller needs: the original's domain
+// must be on alwaysOriginalDomains, must NOT also be on alwaysArchiveDomains
+// (corrupted-storage guard -- see the inline comment at the original call
+// site below), and the tab must not already have a manual override recorded
+// against that domain (skipped here for the tabs.onUpdated engine path,
+// which already resolved manual-override precedence in its own caller via
+// `relevantUrl`/hasManualOverride before calling this; the message path
+// below performs its own hasManualOverride check using the same helper so
+// both entry points enforce it exactly once). Returns true and performs the
+// tabs.update + engine marker if the rule fires; returns false (no side
+// effects) otherwise.
+function applyDeArchiveRuleForOriginal(tabId, original, alwaysArchiveDomains, alwaysOriginalDomains) {
+  if (!original) return false;
+  if (!matchesAnyDomain(original, alwaysOriginalDomains)) return false;
+  // Defensive: if the original's domain is ALSO on alwaysArchiveDomains
+  // (should be impossible given 6kl.3's mutual-exclusivity enforcement, but
+  // storage can be hand-edited or corrupted), refuse to fire rather than
+  // redirect to a page rule (b) would immediately archive again.
+  if (matchesAnyDomain(original, alwaysArchiveDomains)) return false;
+
+  markEngineNavigation(tabId, original);
+  api.tabs.update(tabId, { url: original });
+  return true;
+}
+
 // Applies the de-archive and archive rules to a single tabs.onUpdated
 // navigation event. Both rules read fresh storage.local state each call
 // (no caching layer in this bead -- storage.local reads are cheap and the
@@ -270,16 +321,7 @@ async function applyAutoRedirectRules(tabId, url) {
     // governs user-initiated archive/de-archive actions -- deliberately
     // does not apply here.
     const original = ArchiveUrl.extractOriginalUrl(url);
-    if (!original) return;
-    if (!matchesAnyDomain(original, alwaysOriginalDomains)) return;
-    // Defensive: if the original's domain is ALSO on alwaysArchiveDomains
-    // (should be impossible given 6kl.3's mutual-exclusivity enforcement,
-    // but storage can be hand-edited or corrupted), refuse to fire rather
-    // than redirect to a page rule (b) would immediately archive again.
-    if (matchesAnyDomain(original, alwaysArchiveDomains)) return;
-
-    markEngineNavigation(tabId, original);
-    api.tabs.update(tabId, { url: original });
+    applyDeArchiveRuleForOriginal(tabId, original, alwaysArchiveDomains, alwaysOriginalDomains);
     return;
   }
 
@@ -379,6 +421,60 @@ api.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     // rejection or block the navigation the browser is already performing.
   });
 });
+
+// ---------------------------------------------------------------------------
+// Snapshot-probe message path (bead 6kl.6)
+//
+// Bare short-code archive pages (e.g. https://archive.is/f0rxt) never
+// change the tab's URL to embed the original, so tabs.onUpdated's rule (a)
+// above never has anything to extract. The snapshot-probe content script
+// scrapes the original out of the rendered page instead and reports it here
+// via runtime.onMessage; this listener stores it for the toggle fallback
+// (see action.onClicked above) and applies the SAME de-archive rule the
+// auto-redirect engine uses, since the URL-change-driven onUpdated path
+// can't fire for this case.
+// ---------------------------------------------------------------------------
+
+// Handles a single {type:'snapshot-original', originalUrl} report from the
+// snapshot-probe content script. Never trusts the reported URL blindly:
+// re-validates it's http(s) and not itself a mirror host (a compromised or
+// buggy content script could otherwise be used to redirect a tab to an
+// attacker-controlled URL, or to loop the engine by "reporting" an archive
+// URL as if it were an original). Stores a validated report unconditionally
+// (even if the de-archive rule below doesn't fire for it -- the toggle
+// fallback still wants it), then applies the shared de-archive rule so an
+// always-original-listed domain is bounced immediately, honoring the
+// manual-override guard the same way the tabs.onUpdated path does.
+async function handleSnapshotOriginalMessage(message, sender) {
+  if (!message || message.type !== "snapshot-original") return;
+  if (!sender || !sender.tab || sender.tab.id === undefined || sender.tab.id === null) return;
+
+  const tabId = sender.tab.id;
+  const originalUrl = message.originalUrl;
+
+  if (!isHttpUrl(originalUrl)) return;
+  if (ArchiveUrl.isArchiveUrl(originalUrl)) return;
+
+  snapshotOriginals.set(tabId, originalUrl);
+
+  if (hasManualOverride(tabId, originalUrl)) return;
+
+  const [alwaysArchiveDomains, alwaysOriginalDomains] = await Promise.all([
+    readDomainList("alwaysArchiveDomains"),
+    readDomainList("alwaysOriginalDomains"),
+  ]);
+
+  applyDeArchiveRuleForOriginal(tabId, originalUrl, alwaysArchiveDomains, alwaysOriginalDomains);
+}
+
+if (api.runtime && api.runtime.onMessage) {
+  api.runtime.onMessage.addListener((message, sender) => {
+    handleSnapshotOriginalMessage(message, sender).catch(() => {
+      // Never let a storage or matching error surface as an unhandled
+      // rejection; mirrors the tabs.onUpdated listener's error handling.
+    });
+  });
+}
 
 const menus = api.contextMenus || api.menus;
 

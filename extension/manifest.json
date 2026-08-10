@@ -29,6 +29,21 @@
     "service_worker": "background.js",
     "scripts": ["archive-url.js", "background.js"]
   },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://archive.ph/*",
+        "https://archive.today/*",
+        "https://archive.fo/*",
+        "https://archive.is/*",
+        "https://archive.li/*",
+        "https://archive.md/*",
+        "https://archive.vn/*"
+      ],
+      "js": ["archive-url.js", "snapshot-probe.js"],
+      "run_at": "document_end"
+    }
+  ],
   "options_ui": {
     "page": "settings/settings.html"
   }

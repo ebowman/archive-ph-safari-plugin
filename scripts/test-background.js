@@ -59,6 +59,7 @@ function makeMockChrome({
   let onRemovedListener = null;
   let menuOnClickedListener = null;
   let onUpdatedListener = null;
+  let onMessageListener = null;
   let createdMenu = null;
 
   const chromeMock = {
@@ -127,6 +128,11 @@ function makeMockChrome({
     },
     runtime: {
       lastError: undefined,
+      onMessage: {
+        addListener(fn) {
+          onMessageListener = fn;
+        },
+      },
     },
   };
 
@@ -137,8 +143,21 @@ function makeMockChrome({
     getOnRemovedListener: () => onRemovedListener,
     getMenuOnClickedListener: () => menuOnClickedListener,
     getOnUpdatedListener: () => onUpdatedListener,
+    getOnMessageListener: () => onMessageListener,
     getCreatedMenu: () => createdMenu,
   };
+}
+
+// Simulates a runtime.onMessage dispatch from a content script running in
+// tabId, awaiting the listener's returned promise (background.js's listener
+// returns the result of handleSnapshotOriginalMessage(...).catch(...), so
+// this mirrors how a real message dispatch would be awaited) then flushing
+// remaining microtasks so any chained storage.local reads settle.
+async function dispatchMessage(h, message, tabId) {
+  const listener = h.getOnMessageListener();
+  const sender = { tab: { id: tabId } };
+  await listener(message, sender);
+  await flush();
 }
 
 // Loads archive-url.js then background.js into one fresh vm context wired
@@ -819,6 +838,212 @@ async function testEngineMarkerLoadBearingOnNestedArchiveOfArchive() {
   );
 }
 
+// --- Snapshot-probe message path (bead 6kl.6) -----------------------------
+//
+// Drives the REAL api.runtime.onMessage listener background.js registers,
+// simulating {type:'snapshot-original', originalUrl} reports from the
+// content script for bare short-code archive tabs.
+
+// --- (n) message + domain on alwaysOriginalDomains -> tabs.update to
+//     original, engine marker set ------------------------------------------
+
+async function testSnapshotMessageDeArchivesListedDomain() {
+  const h = loadBackground({ alwaysOriginalDomains: ["news.example"] });
+
+  await dispatchMessage(
+    h,
+    { type: "snapshot-original", originalUrl: "https://news.example/story" },
+    20
+  );
+
+  check("(snapshot-n) tabs.update called once", h.calls.tabsUpdate.length, 1);
+  check("(snapshot-n) tabs.update targets the reporting tab", h.calls.tabsUpdate[0] && h.calls.tabsUpdate[0].tabId, 20);
+  check(
+    "(snapshot-n) tabs.update url is the reported original",
+    h.calls.tabsUpdate[0] && h.calls.tabsUpdate[0].url,
+    "https://news.example/story"
+  );
+  check("(snapshot-n) tabs.create not called", h.calls.tabsCreate.length, 0);
+
+  // The engine marker must also be set so a subsequent tabs.onUpdated event
+  // reporting this same navigation landing (if the browser fires one) is
+  // recognized as engine-initiated and not re-evaluated.
+  const onUpdated = h.getOnUpdatedListener();
+  onUpdated(20, { url: "https://news.example/story" }, { id: 20, url: "https://news.example/story" });
+  await flush();
+  check(
+    "(snapshot-n) engine marker set by the message path suppresses a follow-up onUpdated for the same landing",
+    h.calls.tabsUpdate.length,
+    1
+  );
+}
+
+// --- (o) manual override suppresses the message-path redirect -------------
+
+async function testSnapshotMessageSuppressedByManualOverride() {
+  const h = loadBackground({ alwaysOriginalDomains: ["news.example"] });
+  const { sandbox } = h;
+
+  // Simulate a prior manual toggle that recorded an override for this tab
+  // against news.example (e.g. the user manually re-archived it already).
+  sandbox.recordManualOverride(21, "https://news.example/story");
+
+  await dispatchMessage(
+    h,
+    { type: "snapshot-original", originalUrl: "https://news.example/story" },
+    21
+  );
+
+  check(
+    "(snapshot-o) manual override suppresses the auto de-archive",
+    h.calls.tabsUpdate.length,
+    0
+  );
+  check("(snapshot-o) tabs.create not called either", h.calls.tabsCreate.length, 0);
+}
+
+// --- (p) unlisted domain -> no tabs call, but still stored for the toggle
+//     fallback (case (s) below exercises the fallback read) ----------------
+
+async function testSnapshotMessageUnlistedDomainNoCall() {
+  const h = loadBackground({ alwaysOriginalDomains: ["news.example"] });
+
+  await dispatchMessage(
+    h,
+    { type: "snapshot-original", originalUrl: "https://unlisted.test/story" },
+    22
+  );
+
+  check("(snapshot-p) tabs.update not called for unlisted domain", h.calls.tabsUpdate.length, 0);
+  check("(snapshot-p) tabs.create not called for unlisted domain", h.calls.tabsCreate.length, 0);
+}
+
+// --- (q) mirror-host originalUrl is rejected (never trust content-script
+//     input blindly) --------------------------------------------------------
+
+async function testSnapshotMessageRejectsMirrorHostOriginal() {
+  const h = loadBackground({ alwaysOriginalDomains: ["archive.ph"] });
+
+  await dispatchMessage(
+    h,
+    { type: "snapshot-original", originalUrl: "https://archive.ph/newest/https://example.com/x" },
+    23
+  );
+
+  check(
+    "(snapshot-q) mirror-host originalUrl rejected, no tabs.update",
+    h.calls.tabsUpdate.length,
+    0
+  );
+
+  // Also must not be stored for the toggle fallback -- verified via the
+  // toggle path itself: a bare short-code tab click after this rejected
+  // report must still no-op.
+  const onClicked = h.getOnClickedListener();
+  onClicked({ id: 23, url: "https://archive.ph/AbC12" });
+  await flush();
+  check(
+    "(snapshot-q) rejected report is not stored; toggle still no-ops",
+    h.calls.tabsUpdate.length,
+    0
+  );
+  check("(snapshot-q) toggle still does not create a tab either", h.calls.tabsCreate.length, 0);
+}
+
+// --- (r) non-http(s) scheme originalUrl is rejected ------------------------
+
+async function testSnapshotMessageRejectsNonHttpOriginal() {
+  const h = loadBackground({ alwaysOriginalDomains: ["example.com"] });
+
+  await dispatchMessage(h, { type: "snapshot-original", originalUrl: "javascript:alert(1)" }, 24);
+
+  check(
+    "(snapshot-r) non-http(s) originalUrl rejected, no tabs.update",
+    h.calls.tabsUpdate.length,
+    0
+  );
+}
+
+// --- (s) toggle fallback: bare short-code tab, AFTER a message stored the
+//     original, navigates to it (and records a manual override) ------------
+
+async function testToggleFallsBackToStoredSnapshotOriginal() {
+  const h = loadBackground({ newTabSetting: false });
+
+  // Unlisted-domain report (case p's scenario): stored but does not itself
+  // trigger a redirect since no domain-list rule matches.
+  await dispatchMessage(
+    h,
+    { type: "snapshot-original", originalUrl: "https://example.com/bare-code-story" },
+    25
+  );
+  check(
+    "(snapshot-s) storing report alone does not navigate",
+    h.calls.tabsUpdate.length,
+    0
+  );
+
+  const onClicked = h.getOnClickedListener();
+  onClicked({ id: 25, url: "https://archive.ph/f0rxt" });
+  await flush();
+
+  check("(snapshot-s) toggle click uses the stored original", h.calls.tabsUpdate.length, 1);
+  check(
+    "(snapshot-s) toggle click navigates to the stored original url",
+    h.calls.tabsUpdate[0] && h.calls.tabsUpdate[0].url,
+    "https://example.com/bare-code-story"
+  );
+  check("(snapshot-s) toggle click did not open a new tab", h.calls.tabsCreate.length, 0);
+
+  const { sandbox } = h;
+  assertTrue(
+    "(snapshot-s) toggle click records a manual override for the de-archived domain",
+    sandbox.hasManualOverride(25, "https://example.com/bare-code-story")
+  );
+}
+
+// --- (t) toggle fallback: no message ever stored -> still no-op -----------
+
+async function testToggleNoFallbackWhenNoMessageStored() {
+  const h = loadBackground({});
+  const onClicked = h.getOnClickedListener();
+
+  onClicked({ id: 26, url: "https://archive.ph/f0rxt" });
+  await flush();
+
+  check(
+    "(snapshot-t) no stored original -> toggle still no-ops",
+    h.calls.tabsUpdate.length,
+    0
+  );
+  check("(snapshot-t) toggle still does not create a tab", h.calls.tabsCreate.length, 0);
+}
+
+// --- (u) tabs.onRemoved clears the stored snapshot original ----------------
+
+async function testOnRemovedClearsSnapshotOriginal() {
+  const h = loadBackground({});
+
+  await dispatchMessage(
+    h,
+    { type: "snapshot-original", originalUrl: "https://example.com/cleared-story" },
+    27
+  );
+
+  const onRemoved = h.getOnRemovedListener();
+  onRemoved(27);
+
+  const onClicked = h.getOnClickedListener();
+  onClicked({ id: 27, url: "https://archive.ph/f0rxt" });
+  await flush();
+
+  check(
+    "(snapshot-u) stored original cleared by tabs.onRemoved; toggle no-ops",
+    h.calls.tabsUpdate.length,
+    0
+  );
+}
+
 // --- run all cases ---------------------------------------------------------
 
 async function main() {
@@ -845,6 +1070,15 @@ async function main() {
   await testEngineLoopDrillDeArchiveMarker();
   await testEngineCorruptedBothListsGuardedByRuleA();
   await testEngineMarkerLoadBearingOnNestedArchiveOfArchive();
+
+  await testSnapshotMessageDeArchivesListedDomain();
+  await testSnapshotMessageSuppressedByManualOverride();
+  await testSnapshotMessageUnlistedDomainNoCall();
+  await testSnapshotMessageRejectsMirrorHostOriginal();
+  await testSnapshotMessageRejectsNonHttpOriginal();
+  await testToggleFallsBackToStoredSnapshotOriginal();
+  await testToggleNoFallbackWhenNoMessageStored();
+  await testOnRemovedClearsSnapshotOriginal();
 
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed > 0 ? 1 : 0);
