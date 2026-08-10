@@ -171,8 +171,9 @@ re-registers only the `/Applications` copy, then restart Safari.
 
 ## Manual test checklist
 
-- [ ] Click the icon on an `https://` page → a new tab opens at
-      `https://archive.ph/newest/<that-url>`.
+- [ ] Click the icon on an `https://` page → the current tab navigates to
+      `https://archive.ph/newest/<that-url>` (or a new tab, if "Open
+      archived page in a new tab" is enabled in Settings).
 - [ ] Click the icon on a non-web tab (e.g. Safari's start page) → nothing
       happens, no error.
 - [ ] The archived page loads, or archive.ph offers to save the page if no

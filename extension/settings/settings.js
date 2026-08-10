@@ -227,7 +227,7 @@
     if (!checkbox) return;
 
     api.storage.local.get("newTab").then((result) => {
-      checkbox.checked = result.newTab !== false;
+      checkbox.checked = result.newTab === true;
     });
 
     checkbox.addEventListener("change", () => {

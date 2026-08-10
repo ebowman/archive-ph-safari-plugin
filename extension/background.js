@@ -43,15 +43,15 @@ async function pickMirror() {
 }
 
 // Reads the "open in a new tab" preference from storage.local, defaulting
-// to true (current/legacy behavior) when unset or when storage is
+// to false (reuse the current tab) when unset or when storage is
 // unavailable (e.g. in a test harness or an older browser build).
 async function shouldUseNewTab() {
-  if (!api.storage || !api.storage.local) return true;
+  if (!api.storage || !api.storage.local) return false;
   try {
     const { newTab } = await api.storage.local.get("newTab");
-    return newTab !== false;
+    return newTab === true;
   } catch (e) {
-    return true;
+    return false;
   }
 }
 

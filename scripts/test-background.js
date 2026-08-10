@@ -37,7 +37,8 @@ function assertTrue(name, condition) {
 
 // Builds a fresh mock `chrome` global for a single test case. newTabSetting
 // controls what storage.local.get("newTab") resolves to (undefined by
-// default, matching "unset" -> defaults to true per shouldUseNewTab).
+// default, matching "unset" -> defaults to false, i.e. reuse the current
+// tab, per shouldUseNewTab).
 // alwaysArchiveDomains / alwaysOriginalDomains seed the auto-redirect
 // engine's domain lists (bead 6kl.4); storageGetShouldReject, when true,
 // makes every storage.local.get call reject (asserting the engine's
@@ -256,7 +257,8 @@ function testSharedScopeLoadDoesNotThrow() {
   }
 }
 
-// --- (a) normal page + newTab default -> tabs.create with archive.ph -----
+// --- (a) normal page + newTab default (unset) -> tabs.update on the same
+//     tab with archive.ph ---------------------------------------------------
 
 async function testNormalPageDefaultNewTab() {
   const h = loadBackground({});
@@ -264,12 +266,38 @@ async function testNormalPageDefaultNewTab() {
   listener({ id: 1, url: "https://example.com/article" });
   await flush();
 
-  check("(a) tabs.update not called", h.calls.tabsUpdate.length, 0);
-  check("(a) tabs.create called once", h.calls.tabsCreate.length, 1);
+  check("(a) tabs.create not called", h.calls.tabsCreate.length, 0);
+  check("(a) tabs.update called once", h.calls.tabsUpdate.length, 1);
+  check("(a) tabs.update targets the clicked tab", h.calls.tabsUpdate[0] && h.calls.tabsUpdate[0].tabId, 1);
   check(
-    "(a) tabs.create url is archive.ph/newest/<url>",
-    h.calls.tabsCreate[0] && h.calls.tabsCreate[0].url,
+    "(a) tabs.update url is archive.ph/newest/<url>",
+    h.calls.tabsUpdate[0] && h.calls.tabsUpdate[0].url,
     "https://archive.ph/newest/https://example.com/article"
+  );
+}
+
+// --- (a2) storage.get("newTab") explicitly resolves {} (key absent) ->
+//     toolbar archive still uses tabs.update on the clicked tab -----------
+//
+// Distinct from case (a) above: (a) exercises the harness's default
+// newTabSetting (undefined), which the mock also serializes as storage.get
+// resolving {}; this case names that "key absent from storage" contract
+// explicitly so a future harness refactor that changes the undefined
+// default's resolution shape can't silently stop covering it.
+
+async function testStorageGetReturnsEmptyObjectDefaultsToSameTab() {
+  const h = loadBackground({ newTabSetting: undefined });
+  const listener = h.getOnClickedListener();
+  listener({ id: 50, url: "https://example.com/absent-key" });
+  await flush();
+
+  check("(a2) tabs.create not called", h.calls.tabsCreate.length, 0);
+  check("(a2) tabs.update called once", h.calls.tabsUpdate.length, 1);
+  check("(a2) tabs.update targets the clicked tab", h.calls.tabsUpdate[0] && h.calls.tabsUpdate[0].tabId, 50);
+  check(
+    "(a2) tabs.update url is archive.ph/newest/<url>",
+    h.calls.tabsUpdate[0] && h.calls.tabsUpdate[0].url,
+    "https://archive.ph/newest/https://example.com/absent-key"
   );
 }
 
@@ -1082,6 +1110,7 @@ async function main() {
   testSharedScopeLoadDoesNotThrow();
 
   await testNormalPageDefaultNewTab();
+  await testStorageGetReturnsEmptyObjectDefaultsToSameTab();
   await testDeArchiveSameTab();
   await testDeArchiveNewTab();
   await testBareShortCodeNoOp();
