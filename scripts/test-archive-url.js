@@ -236,6 +236,34 @@ check(
   false
 );
 
+// --- isMirrorHostUrl (bead ut7) ---------------------------------------------
+
+check(
+  "isMirrorHostUrl: exact mirror host",
+  ArchiveUrl.isMirrorHostUrl("https://archive.ph/newest/https://example.com"),
+  true
+);
+check(
+  "isMirrorHostUrl: mirror subdomain",
+  ArchiveUrl.isMirrorHostUrl("https://news.archive.is/x"),
+  true
+);
+check(
+  "isMirrorHostUrl: non-mirror host",
+  ArchiveUrl.isMirrorHostUrl("https://example.com/story"),
+  false
+);
+check(
+  "isMirrorHostUrl: suffix-but-not-subdomain is not a false positive",
+  ArchiveUrl.isMirrorHostUrl("https://notarchive.ph/x"),
+  false
+);
+check(
+  "isMirrorHostUrl: unparseable url -> false",
+  ArchiveUrl.isMirrorHostUrl("not a url"),
+  false
+);
+
 // --- summary ---------------------------------------------------------------
 
 console.log(`\n${passed} passed, ${failed} failed`);

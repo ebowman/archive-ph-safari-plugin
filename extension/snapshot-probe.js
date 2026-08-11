@@ -49,13 +49,10 @@
     }
     if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return false;
     if (typeof ArchiveUrl === "undefined") return false;
-    // ArchiveUrl.urlMatchesDomain checks exact-or-subdomain; reject if the
-    // URL's host matches (or is a subdomain of) ANY mirror host.
-    const isMirror = ArchiveUrl.MIRRORS.some((mirror) => {
-      const mirrorHost = new URL(mirror).hostname;
-      return ArchiveUrl.urlMatchesDomain(rawUrl, mirrorHost);
-    });
-    return !isMirror;
+    // ArchiveUrl.isMirrorHostUrl checks exact-or-subdomain against every
+    // mirror host; reject if the URL's host matches (or is a subdomain of)
+    // ANY mirror host.
+    return !ArchiveUrl.isMirrorHostUrl(rawUrl);
   }
 
   // Best-effort text used to associate an <input> with its label, gathered
