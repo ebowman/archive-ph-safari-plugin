@@ -305,6 +305,43 @@ async function testStorageGetReturnsEmptyObjectDefaultsToSameTab() {
   );
 }
 
+// --- (a3) toolbar click + storage.get rejecting -> shouldUseNewTab's catch
+//     path defaults to same-tab: tabs.update on the clicked tab, no
+//     tabs.create, no unhandled rejection ------------------------------
+//
+// Distinct from (engine-h) below: that case exercises the auto-redirect
+// engine's onUpdated listener under storage rejection. This case pins the
+// toolbar (action.onClicked) direction specifically, since shouldUseNewTab's
+// catch-and-default-to-false is shared code but was previously only
+// verified from the engine call site.
+
+async function testToolbarStorageRejectionDefaultsToSameTab() {
+  let unhandledRejection = null;
+  const onUnhandledRejection = (reason) => {
+    unhandledRejection = reason;
+  };
+  process.on("unhandledRejection", onUnhandledRejection);
+
+  try {
+    const h = loadBackground({ storageGetShouldReject: true });
+    const listener = h.getOnClickedListener();
+    listener({ id: 21, url: "https://example.com/toolbar-rejection" });
+    await flush();
+
+    check("(a3) tabs.update called once on the clicked tab", h.calls.tabsUpdate.length, 1);
+    check("(a3) tabs.update targets the clicked tab", h.calls.tabsUpdate[0] && h.calls.tabsUpdate[0].tabId, 21);
+    check(
+      "(a3) tabs.update url is archive.ph/newest/<url>",
+      h.calls.tabsUpdate[0] && h.calls.tabsUpdate[0].url,
+      "https://archive.ph/newest/https://example.com/toolbar-rejection"
+    );
+    check("(a3) tabs.create not called", h.calls.tabsCreate.length, 0);
+    check("(a3) no unhandled rejection surfaced", unhandledRejection, null);
+  } finally {
+    process.removeListener("unhandledRejection", onUnhandledRejection);
+  }
+}
+
 // --- (b) archive URL + newTab=false -> tabs.update on same tab -----------
 
 async function testDeArchiveSameTab() {
@@ -1225,6 +1262,7 @@ async function main() {
 
   await testNormalPageDefaultNewTab();
   await testStorageGetReturnsEmptyObjectDefaultsToSameTab();
+  await testToolbarStorageRejectionDefaultsToSameTab();
   await testDeArchiveSameTab();
   await testDeArchiveNewTab();
   await testBareShortCodeNoOp();
