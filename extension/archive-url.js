@@ -156,6 +156,19 @@ function urlMatchesDomain(url, domain) {
   return host === d || host.endsWith("." + d);
 }
 
+// Returns true iff url's host is one of the archive.ph mirror hosts, OR a
+// subdomain of one (e.g. https://news.archive.is/x). Broader than
+// isArchiveUrl (which is exact-host only): this is the check to use at
+// trust boundaries where a reported/candidate URL must be confirmed to NOT
+// be a mirror-hosted page in any form, mirror subdomains included. Shared
+// by snapshot-probe.js's isPlausibleOriginal and background.js's
+// handleSnapshotOriginalMessage so both sides of that boundary agree on
+// exactly the same definition of "is a mirror host". Returns false for
+// unparseable input (urlMatchesDomain's own contract).
+function isMirrorHostUrl(url) {
+  return MIRROR_HOSTS.some((mirrorHost) => urlMatchesDomain(url, mirrorHost));
+}
+
 globalThis.ArchiveUrl = {
   MIRRORS,
   isArchiveUrl,
@@ -163,6 +176,7 @@ globalThis.ArchiveUrl = {
   buildArchiveUrl,
   normalizeDomain,
   urlMatchesDomain,
+  isMirrorHostUrl,
 };
 
 })();

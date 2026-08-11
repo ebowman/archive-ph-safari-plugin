@@ -459,23 +459,34 @@ api.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 
 // Handles a single {type:'snapshot-original', originalUrl} report from the
 // snapshot-probe content script. Never trusts the reported URL blindly:
-// re-validates it's http(s) and not itself a mirror host (a compromised or
-// buggy content script could otherwise be used to redirect a tab to an
-// attacker-controlled URL, or to loop the engine by "reporting" an archive
-// URL as if it were an original). Stores a validated report unconditionally
-// (even if the de-archive rule below doesn't fire for it -- the toggle
-// fallback still wants it), then applies the shared de-archive rule so an
+// re-validates it's http(s) and not itself a mirror host -- including a
+// mirror SUBDOMAIN (e.g. https://news.archive.is/x), via the same
+// ArchiveUrl.isMirrorHostUrl check the probe itself uses to build
+// candidates, so background revalidation can't be fooled by a host the
+// probe would already have rejected (a compromised or buggy content script
+// could otherwise be used to redirect a tab to an attacker-controlled URL,
+// or to loop the engine by "reporting" an archive URL as if it were an
+// original). Also requires, when the sender's tab URL is known, that it be
+// a mirror-host page itself: a snapshot-original report can only
+// legitimately originate from a mirror page, so a report attributed to a
+// tab sitting on some other site is ignored. sender.tab.url is absent in
+// some Safari contexts, so its absence is tolerated (not treated as a
+// rejection) -- only a *present*, non-mirror URL causes the message to be
+// ignored. Stores a validated report unconditionally (even if the
+// de-archive rule below doesn't fire for it -- the toggle fallback still
+// wants it), then applies the shared de-archive rule so an
 // always-original-listed domain is bounced immediately, honoring the
 // manual-override guard the same way the tabs.onUpdated path does.
 async function handleSnapshotOriginalMessage(message, sender) {
   if (!message || message.type !== "snapshot-original") return;
   if (!sender || !sender.tab || sender.tab.id === undefined || sender.tab.id === null) return;
+  if (sender.tab.url && !ArchiveUrl.isMirrorHostUrl(sender.tab.url)) return;
 
   const tabId = sender.tab.id;
   const originalUrl = message.originalUrl;
 
   if (!isHttpUrl(originalUrl)) return;
-  if (ArchiveUrl.isArchiveUrl(originalUrl)) return;
+  if (ArchiveUrl.isMirrorHostUrl(originalUrl)) return;
 
   snapshotOriginals.set(tabId, originalUrl);
 

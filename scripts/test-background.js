@@ -154,9 +154,13 @@ function makeMockChrome({
 // returns the result of handleSnapshotOriginalMessage(...).catch(...), so
 // this mirrors how a real message dispatch would be awaited) then flushing
 // remaining microtasks so any chained storage.local reads settle.
-async function dispatchMessage(h, message, tabId) {
+// senderTabUrl is optional (sender.tab.url is absent in some real Safari
+// contexts); when provided it's attached to the sender so tests can drive
+// the sender.tab.url mirror-host guard in handleSnapshotOriginalMessage.
+async function dispatchMessage(h, message, tabId, senderTabUrl) {
   const listener = h.getOnMessageListener();
   const sender = { tab: { id: tabId } };
+  if (senderTabUrl !== undefined) sender.tab.url = senderTabUrl;
   await listener(message, sender);
   await flush();
 }
@@ -299,6 +303,43 @@ async function testStorageGetReturnsEmptyObjectDefaultsToSameTab() {
     h.calls.tabsUpdate[0] && h.calls.tabsUpdate[0].url,
     "https://archive.ph/newest/https://example.com/absent-key"
   );
+}
+
+// --- (a3) toolbar click + storage.get rejecting -> shouldUseNewTab's catch
+//     path defaults to same-tab: tabs.update on the clicked tab, no
+//     tabs.create, no unhandled rejection ------------------------------
+//
+// Distinct from (engine-h) below: that case exercises the auto-redirect
+// engine's onUpdated listener under storage rejection. This case pins the
+// toolbar (action.onClicked) direction specifically, since shouldUseNewTab's
+// catch-and-default-to-false is shared code but was previously only
+// verified from the engine call site.
+
+async function testToolbarStorageRejectionDefaultsToSameTab() {
+  let unhandledRejection = null;
+  const onUnhandledRejection = (reason) => {
+    unhandledRejection = reason;
+  };
+  process.on("unhandledRejection", onUnhandledRejection);
+
+  try {
+    const h = loadBackground({ storageGetShouldReject: true });
+    const listener = h.getOnClickedListener();
+    listener({ id: 21, url: "https://example.com/toolbar-rejection" });
+    await flush();
+
+    check("(a3) tabs.update called once on the clicked tab", h.calls.tabsUpdate.length, 1);
+    check("(a3) tabs.update targets the clicked tab", h.calls.tabsUpdate[0] && h.calls.tabsUpdate[0].tabId, 21);
+    check(
+      "(a3) tabs.update url is archive.ph/newest/<url>",
+      h.calls.tabsUpdate[0] && h.calls.tabsUpdate[0].url,
+      "https://archive.ph/newest/https://example.com/toolbar-rejection"
+    );
+    check("(a3) tabs.create not called", h.calls.tabsCreate.length, 0);
+    check("(a3) no unhandled rejection surfaced", unhandledRejection, null);
+  } finally {
+    process.removeListener("unhandledRejection", onUnhandledRejection);
+  }
 }
 
 // --- (b) archive URL + newTab=false -> tabs.update on same tab -----------
@@ -1024,6 +1065,116 @@ async function testSnapshotMessageRejectsNonHttpOriginal() {
   );
 }
 
+// --- (v) mirror-SUBDOMAIN originalUrl is rejected (bead ut7 item 1/4):
+//     the probe rejects mirror subdomains via subdomain-aware
+//     urlMatchesDomain; background revalidation must reject them too, not
+//     just exact mirror hosts. ------------------------------------------
+
+async function testSnapshotMessageRejectsMirrorSubdomainOriginal() {
+  const h = loadBackground({ alwaysOriginalDomains: ["archive.is"] });
+
+  await dispatchMessage(
+    h,
+    { type: "snapshot-original", originalUrl: "https://news.archive.is/x" },
+    28
+  );
+
+  check(
+    "(snapshot-v) mirror-subdomain originalUrl rejected, no tabs.update",
+    h.calls.tabsUpdate.length,
+    0
+  );
+
+  // Also must not be stored for the toggle fallback.
+  const onClicked = h.getOnClickedListener();
+  onClicked({ id: 28, url: "https://archive.ph/AbC12" });
+  await flush();
+  check(
+    "(snapshot-v) rejected mirror-subdomain report is not stored; toggle still no-ops",
+    h.calls.tabsUpdate.length,
+    0
+  );
+}
+
+// --- (w) scheme guard: ftp:// originalUrl is rejected (bead ut7 item 2) ----
+//     Pins isHttpUrl's presence in the handler: deleting that guard would
+//     let a non-http(s) scheme reach tabs.update via the de-archive rule
+//     below (unlike case (r)'s javascript: which the earlier isHttpUrl
+//     check already covers, this locks the guard against a *plausible-
+//     looking* scheme rather than an obviously-inert one). ----------------
+
+async function testSnapshotMessageRejectsFtpScheme() {
+  const h = loadBackground({ alwaysOriginalDomains: ["example.com"] });
+
+  await dispatchMessage(
+    h,
+    { type: "snapshot-original", originalUrl: "ftp://x.example.com/" },
+    29
+  );
+
+  check(
+    "(snapshot-w) ftp:// originalUrl rejected, no tabs.update",
+    h.calls.tabsUpdate.length,
+    0
+  );
+  check("(snapshot-w) ftp:// originalUrl rejected, no tabs.create", h.calls.tabsCreate.length, 0);
+}
+
+// --- (x) sender.tab.url present but NOT a mirror-host page -> message
+//     ignored (bead ut7 item 3): a snapshot-original report can only
+//     legitimately originate from a mirror page. ---------------------------
+
+async function testSnapshotMessageIgnoredWhenSenderTabNotMirror() {
+  const h = loadBackground({ alwaysOriginalDomains: ["news.example"] });
+
+  await dispatchMessage(
+    h,
+    { type: "snapshot-original", originalUrl: "https://news.example/story" },
+    30,
+    "https://not-a-mirror.example/some-page"
+  );
+
+  check(
+    "(snapshot-x) non-mirror sender.tab.url -> message ignored, no tabs.update",
+    h.calls.tabsUpdate.length,
+    0
+  );
+
+  // Also must not be stored for the toggle fallback.
+  const onClicked = h.getOnClickedListener();
+  onClicked({ id: 30, url: "https://archive.ph/AbC12" });
+  await flush();
+  check(
+    "(snapshot-x) ignored report is not stored; toggle still no-ops",
+    h.calls.tabsUpdate.length,
+    0
+  );
+}
+
+// --- (y) sender.tab.url absent -> message still processed (tolerant path,
+//     some Safari contexts omit tab.url) ------------------------------------
+
+async function testSnapshotMessageProcessedWhenSenderTabUrlAbsent() {
+  const h = loadBackground({ alwaysOriginalDomains: ["news.example"] });
+
+  await dispatchMessage(
+    h,
+    { type: "snapshot-original", originalUrl: "https://news.example/story" },
+    31
+  );
+
+  check(
+    "(snapshot-y) absent sender.tab.url does not block processing",
+    h.calls.tabsUpdate.length,
+    1
+  );
+  check(
+    "(snapshot-y) tabs.update targets the reporting tab",
+    h.calls.tabsUpdate[0] && h.calls.tabsUpdate[0].tabId,
+    31
+  );
+}
+
 // --- (s) toggle fallback: bare short-code tab, AFTER a message stored the
 //     original, navigates to it (and records a manual override) ------------
 
@@ -1111,6 +1262,7 @@ async function main() {
 
   await testNormalPageDefaultNewTab();
   await testStorageGetReturnsEmptyObjectDefaultsToSameTab();
+  await testToolbarStorageRejectionDefaultsToSameTab();
   await testDeArchiveSameTab();
   await testDeArchiveNewTab();
   await testBareShortCodeNoOp();
@@ -1139,6 +1291,10 @@ async function main() {
   await testSnapshotMessageUnlistedDomainNoCall();
   await testSnapshotMessageRejectsMirrorHostOriginal();
   await testSnapshotMessageRejectsNonHttpOriginal();
+  await testSnapshotMessageRejectsMirrorSubdomainOriginal();
+  await testSnapshotMessageRejectsFtpScheme();
+  await testSnapshotMessageIgnoredWhenSenderTabNotMirror();
+  await testSnapshotMessageProcessedWhenSenderTabUrlAbsent();
   await testToggleFallsBackToStoredSnapshotOriginal();
   await testToggleNoFallbackWhenNoMessageStored();
   await testOnRemovedClearsSnapshotOriginal();

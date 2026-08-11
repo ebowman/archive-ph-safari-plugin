@@ -60,8 +60,10 @@ if (!SnapshotProbe || typeof SnapshotProbe.extractFromDocument !== "function") {
 
 // A minimal duck-typed stub for an <input> element: value + attribute
 // lookups snapshot-probe.js's nearbyLabelText() and isPlausibleOriginal()
-// actually read.
-function fakeInput({ value, placeholder, ariaLabel, title, name, id } = {}) {
+// actually read. readOnly defaults to false to mirror a real <input>
+// element's default DOM property (fixtures that don't care about the
+// readonly tier don't need to set it).
+function fakeInput({ value, placeholder, ariaLabel, title, name, id, readOnly = false } = {}) {
   const attrs = {
     placeholder,
     "aria-label": ariaLabel,
@@ -71,6 +73,7 @@ function fakeInput({ value, placeholder, ariaLabel, title, name, id } = {}) {
   };
   return {
     value,
+    readOnly,
     getAttribute(attr) {
       return attrs[attr] || null;
     },
@@ -249,6 +252,58 @@ function testEmptyDocumentYieldsNull() {
   check("completely empty document -> null", SnapshotProbe.extractFromDocument(doc), null);
 }
 
+// --- real archive.today DOM shape (bead otu, live-verified 2026-08-10) -----
+
+// Models the actual snapshot-page markup: the "Saved from" box is
+// input[name=q] carrying a ?syn- tracking param and is NOT readonly; the
+// "Redirected from" box is an attribute-less READONLY input with the clean
+// URL (no placeholder/aria-label/title, name/id absent -- label association
+// can't find it); SHARE_SHORTLINK/SHARE_LONGLINK/SHARE_MARKDOWN inputs carry
+// archive.today mirror URLs (already filtered out by isPlausibleOriginal);
+// and the FT article's own on-page search inputs are empty. Expects the
+// clean, readonly URL to win via the new readonly tier -- neither label tier
+// matches on this real shape, so without the readonly tier this would fall
+// back to DOM order and return the tracking-decorated variant.
+function testRealArchiveTodayDomShapePrefersReadonlyCleanUrl() {
+  const doc = fakeDocument({
+    inputs: [
+      fakeInput({ value: "https://www.ft.com/content/abc?syn-tracking=1", name: "q" }),
+      fakeInput({ value: "https://www.ft.com/content/abc", readOnly: true }),
+      fakeInput({ value: "https://archive.ph/f0rxt", name: "SHARE_SHORTLINK" }),
+      fakeInput({ value: "https://archive.ph/f0rxt/https://www.ft.com/content/abc", name: "SHARE_LONGLINK" }),
+      fakeInput({ value: "[archived]", name: "SHARE_MARKDOWN" }),
+      fakeInput({ value: "" }),
+      fakeInput({ value: "" }),
+    ],
+  });
+  check(
+    "real archive.today DOM shape: readonly clean URL wins over ?syn- tracking variant",
+    SnapshotProbe.extractFromDocument(doc),
+    "https://www.ft.com/content/abc"
+  );
+}
+
+// Pins tier order: a labeled "redirected from" input that is NOT readonly
+// must still beat a readonly input with no label, confirming the label
+// tiers are checked before the readonly tier.
+function testLabeledRedirectedFromBeatsUnlabeledReadonly() {
+  const doc = fakeDocument({
+    inputs: [
+      fakeInput({ value: "https://www.ft.com/content/readonly-variant", readOnly: true }),
+      fakeInput({
+        value: "https://www.ft.com/content/labeled-variant",
+        placeholder: "Redirected from",
+        readOnly: false,
+      }),
+    ],
+  });
+  check(
+    "labeled redirected-from input (non-readonly) beats an unlabeled readonly input",
+    SnapshotProbe.extractFromDocument(doc),
+    "https://www.ft.com/content/labeled-variant"
+  );
+}
+
 // --- run all cases ---------------------------------------------------------
 
 testRedirectedFromWinsOverSavedFromWithTracking();
@@ -262,6 +317,8 @@ testMetaCanonicalFallbackWhenNoOgUrl();
 testMirrorHostAnchorSkippedInFavorOfLaterNonMirrorAnchor();
 testMirrorSubdomainRejectedByPlausibilityCheck();
 testEmptyDocumentYieldsNull();
+testRealArchiveTodayDomShapePrefersReadonlyCleanUrl();
+testLabeledRedirectedFromBeatsUnlabeledReadonly();
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed > 0 ? 1 : 0);
