@@ -86,12 +86,16 @@ detect_signing_identity() {
     return 0
   fi
 
-  # subject looks like:
+  # subject looks like either of:
   #   subject=UID = XXXXXXXXXX, CN = Apple Development: name (XXXXXXXXXX), OU = TEAMID, O = ..., C = US
-  # The parenthesized string after the CN is NOT the team ID -- only the OU
-  # field is the team ID.
+  #   subject=UID=XXXXXXXXXX,CN=Apple Development: name (XXXXXXXXXX),OU=TEAMID,O=...,C=US
+  # Different openssl builds format `-subject` differently (e.g. macOS
+  # system LibreSSL emits spaces around '=', while Homebrew OpenSSL 3.x
+  # omits them), so the OU field must be matched with optional whitespace
+  # around '='. The parenthesized string after the CN is NOT the team ID --
+  # only the OU field is the team ID.
   local team
-  team="$(echo "${subject}" | sed -n 's/.*OU = \([A-Z0-9]*\).*/\1/p')"
+  team="$(echo "${subject}" | sed -n 's/.*OU[[:space:]]*=[[:space:]]*\([A-Z0-9]*\).*/\1/p')"
 
   if [[ -z "${team}" ]]; then
     return 0
