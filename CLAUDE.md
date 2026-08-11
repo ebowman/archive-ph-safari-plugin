@@ -69,6 +69,12 @@ This protocol applies when ending a Beads implementation workflow. It is subordi
 # the app to register the extension
 ./install.sh
 
+# One-command quality gate: runs every check below (manifest lint, syntax
+# checks, all four node test suites, and the tsc gate) and exits nonzero on
+# the first failure. Prefer this for a full pass; the individual commands
+# below remain useful for targeted runs of a single gate.
+./scripts/run-checks.sh
+
 # Validate the extension source without a full build
 python3 -m json.tool extension/manifest.json
 node --check extension/background.js
