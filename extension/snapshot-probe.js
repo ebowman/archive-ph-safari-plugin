@@ -79,9 +79,19 @@
   // Scans all <input> elements in doc for the best original-URL candidate,
   // preferring one whose nearby label text mentions "redirected from" (a
   // clean URL with no tracking params) over one mentioning "saved from"
-  // (often decorated with a tracking query string, e.g. "?syn-..."), and
-  // falling back to first-in-DOM-order among any remaining plausible
-  // candidates. Returns null if no <input> yields a plausible candidate.
+  // (often decorated with a tracking query string, e.g. "?syn-..."), then
+  // falling back to the first READONLY plausible candidate, and finally to
+  // first-in-DOM-order among any remaining plausible candidates. The
+  // readonly tier exists because live inspection of the real archive.today
+  // snapshot page (bead otu; see bd memory
+  // archive-today-snapshot-page-dom-verified-live-2026) found that its
+  // "Redirected from" box carries NO label-ish attribute at all
+  // (placeholder/aria-label/title/name/id all absent or unhelpful --
+  // name="q" is shared with the tracking-decorated "Saved from" input) and
+  // is thus invisible to nearbyLabelText(); the only reliable marker
+  // distinguishing it from the "Saved from" input on that real page is that
+  // it is readonly. Returns null if no <input> yields a plausible
+  // candidate.
   function extractFromInputs(doc) {
     if (!doc || typeof doc.querySelectorAll !== "function") return null;
 
@@ -94,6 +104,7 @@
 
     let redirectedFromCandidate = null;
     let savedFromCandidate = null;
+    let firstReadonlyCandidate = null;
     let firstPlausibleCandidate = null;
 
     for (const input of inputs) {
@@ -101,6 +112,12 @@
       if (!isPlausibleOriginal(value)) continue;
 
       if (firstPlausibleCandidate === null) firstPlausibleCandidate = value;
+      // Duck-typed: real DOM input elements always expose readOnly as a
+      // boolean, but harness fixtures may omit the property entirely, so
+      // require a strict === true rather than a truthy check.
+      if (firstReadonlyCandidate === null && input && input.readOnly === true) {
+        firstReadonlyCandidate = value;
+      }
 
       const label = nearbyLabelText(input);
       if (redirectedFromCandidate === null && label.includes("redirected from")) {
@@ -112,6 +129,7 @@
 
     if (redirectedFromCandidate !== null) return redirectedFromCandidate;
     if (savedFromCandidate !== null) return savedFromCandidate;
+    if (firstReadonlyCandidate !== null) return firstReadonlyCandidate;
     return firstPlausibleCandidate;
   }
 
