@@ -56,6 +56,9 @@ run_gate "syntax: extension/snapshot-probe.js" \
 run_gate "syntax: extension/settings/settings.js" \
   node --check extension/settings/settings.js
 
+run_gate "test suite: test-bootstrap-signing" \
+  ./scripts/test-bootstrap-signing.sh
+
 # --- Node test suites ---------------------------------------------------
 
 run_gate_tail "test suite: test-archive-url" node scripts/test-archive-url.js
