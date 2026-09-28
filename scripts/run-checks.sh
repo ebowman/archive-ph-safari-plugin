@@ -84,6 +84,18 @@ run_gate "syntax: extension/snapshot-probe.js" \
 run_gate "syntax: extension/settings/settings.js" \
   node --check extension/settings/settings.js
 
+run_gate "syntax: build.sh" \
+  bash -n build.sh
+
+run_gate "syntax: install.sh" \
+  bash -n install.sh
+
+run_gate "syntax: scripts/regenerate-xcode-project.sh" \
+  bash -n scripts/regenerate-xcode-project.sh
+
+run_gate "syntax: scripts/release-ios.sh" \
+  bash -n scripts/release-ios.sh
+
 # --- Node test suites ---------------------------------------------------
 
 run_gate_tail "test suite: test-archive-url" node scripts/test-archive-url.js
