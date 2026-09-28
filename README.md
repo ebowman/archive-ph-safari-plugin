@@ -134,7 +134,7 @@ Extensions list only refreshes on launch.
 This means two app copies are registered. Check with:
 
 ```bash
-pluginkit -m -v -i com.yourCompany.Archive-ph-Opener.Extension
+pluginkit -m -v -i ie.boboco.ArchivePhOpener.Extension
 ```
 
 Fix it by running `./install.sh`, which removes the `app/build` copy and

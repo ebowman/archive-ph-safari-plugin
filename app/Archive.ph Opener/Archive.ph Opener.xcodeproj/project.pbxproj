@@ -3,309 +3,481 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 110;
 	objects = {
 
 /* Begin PBXBuildFile section */
-		946633123027353A00A64009 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 946633113027353A00A64009 /* AppDelegate.swift */; };
-		946633163027353A00A64009 /* Main.html in Resources */ = {isa = PBXBuildFile; fileRef = 946633143027353A00A64009 /* Main.html */; };
-		946633183027353A00A64009 /* Icon.png in Resources */ = {isa = PBXBuildFile; fileRef = 946633173027353A00A64009 /* Icon.png */; };
-		9466331A3027353A00A64009 /* Style.css in Resources */ = {isa = PBXBuildFile; fileRef = 946633193027353A00A64009 /* Style.css */; };
-		9466331C3027353A00A64009 /* Script.js in Resources */ = {isa = PBXBuildFile; fileRef = 9466331B3027353A00A64009 /* Script.js */; };
-		9466331E3027353A00A64009 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9466331D3027353A00A64009 /* ViewController.swift */; };
-		946633213027353A00A64009 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 9466331F3027353A00A64009 /* Main.storyboard */; };
-		946633233027353B00A64009 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 946633223027353B00A64009 /* Assets.xcassets */; };
-		9466332A3027353C00A64009 /* Archive.ph Opener Extension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 946633293027353C00A64009 /* Archive.ph Opener Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		9466332F3027353C00A64009 /* SafariWebExtensionHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9466332E3027353C00A64009 /* SafariWebExtensionHandler.swift */; };
-		9466333E3027353C00A64009 /* background.js in Resources */ = {isa = PBXBuildFile; fileRef = 9466333B3027353C00A64009 /* background.js */; };
-		946633441027353C00A64009 /* archive-url.js in Resources */ = {isa = PBXBuildFile; fileRef = 946633431027353C00A64009 /* archive-url.js */; };
-		946633451027353C00A64009 /* snapshot-probe.js in Resources */ = {isa = PBXBuildFile; fileRef = 946633461027353C00A64009 /* snapshot-probe.js */; };
-		9466333F3027353C00A64009 /* images in Resources */ = {isa = PBXBuildFile; fileRef = 9466333C3027353C00A64009 /* images */; };
-		946633403027353C00A64009 /* manifest.json in Resources */ = {isa = PBXBuildFile; fileRef = 9466333D3027353C00A64009 /* manifest.json */; };
-		946633413027353C00A64009 /* settings in Resources */ = {isa = PBXBuildFile; fileRef = 946633423027353C00A64009 /* settings */; };
+		94FA3DAC306ABC8600026399 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94FA3DAB306ABC8600026399 /* AppDelegate.swift */; };
+		94FA3DAE306ABC8600026399 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94FA3DAD306ABC8600026399 /* SceneDelegate.swift */; };
+		94FA3DB1306ABC8600026399 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 94FA3DAF306ABC8600026399 /* LaunchScreen.storyboard */; };
+		94FA3DB4306ABC8600026399 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 94FA3DB2306ABC8600026399 /* Main.storyboard */; };
+		94FA3DBD306ABC8600026399 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94FA3DBC306ABC8600026399 /* AppDelegate.swift */; };
+		94FA3DC0306ABC8600026399 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 94FA3DBE306ABC8600026399 /* Main.storyboard */; };
+		94FA3DC7306ABC8600026399 /* Archive.ph Opener Extension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 94FA3DC6306ABC8600026399 /* Archive.ph Opener Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		94FA3DD1306ABC8600026399 /* Archive.ph Opener Extension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 94FA3DD0306ABC8600026399 /* Archive.ph Opener Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		94FA3DD6306ABC8600026399 /* Main.html in Resources */ = {isa = PBXBuildFile; fileRef = 94FA3D9B306ABC8400026399 /* Main.html */; };
+		94FA3DD7306ABC8600026399 /* Main.html in Resources */ = {isa = PBXBuildFile; fileRef = 94FA3D9B306ABC8400026399 /* Main.html */; };
+		94FA3DD8306ABC8600026399 /* Icon.png in Resources */ = {isa = PBXBuildFile; fileRef = 94FA3D9D306ABC8400026399 /* Icon.png */; };
+		94FA3DD9306ABC8600026399 /* Icon.png in Resources */ = {isa = PBXBuildFile; fileRef = 94FA3D9D306ABC8400026399 /* Icon.png */; };
+		94FA3DDA306ABC8600026399 /* Style.css in Resources */ = {isa = PBXBuildFile; fileRef = 94FA3D9E306ABC8400026399 /* Style.css */; };
+		94FA3DDB306ABC8600026399 /* Style.css in Resources */ = {isa = PBXBuildFile; fileRef = 94FA3D9E306ABC8400026399 /* Style.css */; };
+		94FA3DDC306ABC8600026399 /* Script.js in Resources */ = {isa = PBXBuildFile; fileRef = 94FA3D9F306ABC8400026399 /* Script.js */; };
+		94FA3DDD306ABC8600026399 /* Script.js in Resources */ = {isa = PBXBuildFile; fileRef = 94FA3D9F306ABC8400026399 /* Script.js */; };
+		94FA3DDE306ABC8600026399 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94FA3DA0306ABC8400026399 /* ViewController.swift */; };
+		94FA3DDF306ABC8600026399 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94FA3DA0306ABC8400026399 /* ViewController.swift */; };
+		94FA3DE0306ABC8600026399 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 94FA3DA1306ABC8600026399 /* Assets.xcassets */; };
+		94FA3DE1306ABC8600026399 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 94FA3DA1306ABC8600026399 /* Assets.xcassets */; };
+		94FA3DE2306ABC8600026399 /* SafariWebExtensionHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94FA3DA3306ABC8600026399 /* SafariWebExtensionHandler.swift */; };
+		94FA3DE3306ABC8600026399 /* SafariWebExtensionHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94FA3DA3306ABC8600026399 /* SafariWebExtensionHandler.swift */; };
+		94FA3DFB306ABC8600026399 /* settings in Resources */ = {isa = PBXBuildFile; fileRef = 94FA3DF5306ABC8600026399 /* settings */; };
+		94FA3DFC306ABC8600026399 /* background.js in Resources */ = {isa = PBXBuildFile; fileRef = 94FA3DF6306ABC8600026399 /* background.js */; };
+		94FA3DFD306ABC8600026399 /* images in Resources */ = {isa = PBXBuildFile; fileRef = 94FA3DF7306ABC8600026399 /* images */; };
+		94FA3DFE306ABC8600026399 /* archive-url.js in Resources */ = {isa = PBXBuildFile; fileRef = 94FA3DF8306ABC8600026399 /* archive-url.js */; };
+		94FA3DFF306ABC8600026399 /* manifest.json in Resources */ = {isa = PBXBuildFile; fileRef = 94FA3DF9306ABC8600026399 /* manifest.json */; };
+		94FA3E00306ABC8600026399 /* snapshot-probe.js in Resources */ = {isa = PBXBuildFile; fileRef = 94FA3DFA306ABC8600026399 /* snapshot-probe.js */; };
+		94FA3E01306ABC8600026399 /* settings in Resources */ = {isa = PBXBuildFile; fileRef = 94FA3DF5306ABC8600026399 /* settings */; };
+		94FA3E02306ABC8600026399 /* background.js in Resources */ = {isa = PBXBuildFile; fileRef = 94FA3DF6306ABC8600026399 /* background.js */; };
+		94FA3E03306ABC8600026399 /* images in Resources */ = {isa = PBXBuildFile; fileRef = 94FA3DF7306ABC8600026399 /* images */; };
+		94FA3E04306ABC8600026399 /* archive-url.js in Resources */ = {isa = PBXBuildFile; fileRef = 94FA3DF8306ABC8600026399 /* archive-url.js */; };
+		94FA3E05306ABC8600026399 /* manifest.json in Resources */ = {isa = PBXBuildFile; fileRef = 94FA3DF9306ABC8600026399 /* manifest.json */; };
+		94FA3E06306ABC8600026399 /* snapshot-probe.js in Resources */ = {isa = PBXBuildFile; fileRef = 94FA3DFA306ABC8600026399 /* snapshot-probe.js */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		9466332B3027353C00A64009 /* PBXContainerItemProxy */ = {
+		94FA3DC8306ABC8600026399 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
-			containerPortal = 946633063027353A00A64009 /* Project object */;
+			containerPortal = 94FA3D95306ABC8400026399 /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = 946633283027353C00A64009;
-			remoteInfo = "Archive.ph Opener Extension";
+			remoteGlobalIDString = 94FA3DC5306ABC8600026399;
+			remoteInfo = "Archive.ph Opener Extension (iOS)";
+		};
+		94FA3DD2306ABC8600026399 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 94FA3D95306ABC8400026399 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 94FA3DCF306ABC8600026399;
+			remoteInfo = "Archive.ph Opener Extension (macOS)";
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
-		946633363027353C00A64009 /* Embed Foundation Extensions */ = {
+		94FA3DE9306ABC8600026399 /* Embed Foundation Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
 			dstPath = "";
-			dstSubfolderSpec = 13;
+			dstSubfolder = PlugIns;
 			files = (
-				9466332A3027353C00A64009 /* Archive.ph Opener Extension.appex in Embed Foundation Extensions */,
+				94FA3DC7306ABC8600026399 /* Archive.ph Opener Extension.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
-			runOnlyForDeploymentPostprocessing = 0;
+		};
+		94FA3DF0306ABC8600026399 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			dstPath = "";
+			dstSubfolder = PlugIns;
+			files = (
+				94FA3DD1306ABC8600026399 /* Archive.ph Opener Extension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
 		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		9466330E3027353A00A64009 /* Archive.ph Opener.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Archive.ph Opener.app"; sourceTree = BUILT_PRODUCTS_DIR; };
-		946633113027353A00A64009 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
-		946633153027353A00A64009 /* Base */ = {isa = PBXFileReference; lastKnownFileType = text.html; name = Base; path = Base.lproj/Main.html; sourceTree = "<group>"; };
-		946633173027353A00A64009 /* Icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Icon.png; sourceTree = "<group>"; };
-		946633193027353A00A64009 /* Style.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = Style.css; sourceTree = "<group>"; };
-		9466331B3027353A00A64009 /* Script.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = Script.js; sourceTree = "<group>"; };
-		9466331D3027353A00A64009 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
-		946633203027353A00A64009 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
-		946633223027353B00A64009 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		946633243027353B00A64009 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		946633293027353C00A64009 /* Archive.ph Opener Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "Archive.ph Opener Extension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
-		9466332E3027353C00A64009 /* SafariWebExtensionHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafariWebExtensionHandler.swift; sourceTree = "<group>"; };
-		946633303027353C00A64009 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		9466333B3027353C00A64009 /* background.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = background.js; path = ../../../extension/background.js; sourceTree = "<group>"; };
-		946633431027353C00A64009 /* archive-url.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = "archive-url.js"; path = "../../../extension/archive-url.js"; sourceTree = "<group>"; };
-		946633461027353C00A64009 /* snapshot-probe.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = "snapshot-probe.js"; path = "../../../extension/snapshot-probe.js"; sourceTree = "<group>"; };
-		9466333C3027353C00A64009 /* images */ = {isa = PBXFileReference; lastKnownFileType = folder; name = images; path = ../../../extension/images; sourceTree = "<group>"; };
-		9466333D3027353C00A64009 /* manifest.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = manifest.json; path = ../../../extension/manifest.json; sourceTree = "<group>"; };
-		946633423027353C00A64009 /* settings */ = {isa = PBXFileReference; lastKnownFileType = folder; name = settings; path = ../../../extension/settings; sourceTree = "<group>"; };
+		94FA3D9C306ABC8400026399 /* Base */ = {isa = PBXFileReference; lastKnownFileType = text.html; name = Base; path = Base.lproj/Main.html; sourceTree = "<group>"; };
+		94FA3D9D306ABC8400026399 /* Icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Icon.png; sourceTree = "<group>"; };
+		94FA3D9E306ABC8400026399 /* Style.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = Style.css; sourceTree = "<group>"; };
+		94FA3D9F306ABC8400026399 /* Script.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = Script.js; sourceTree = "<group>"; };
+		94FA3DA0306ABC8400026399 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
+		94FA3DA1306ABC8600026399 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		94FA3DA3306ABC8600026399 /* SafariWebExtensionHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafariWebExtensionHandler.swift; sourceTree = "<group>"; };
+		94FA3DA8306ABC8600026399 /* Archive.ph Opener.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Archive.ph Opener.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		94FA3DAB306ABC8600026399 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		94FA3DAD306ABC8600026399 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
+		94FA3DB0306ABC8600026399 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		94FA3DB3306ABC8600026399 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		94FA3DB5306ABC8600026399 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		94FA3DBA306ABC8600026399 /* Archive.ph Opener.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Archive.ph Opener.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		94FA3DBC306ABC8600026399 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		94FA3DBF306ABC8600026399 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		94FA3DC1306ABC8600026399 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		94FA3DC6306ABC8600026399 /* Archive.ph Opener Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "Archive.ph Opener Extension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+		94FA3DCB306ABC8600026399 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		94FA3DD0306ABC8600026399 /* Archive.ph Opener Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "Archive.ph Opener Extension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+		94FA3DD5306ABC8600026399 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		94FA3DF5306ABC8600026399 /* settings */ = {isa = PBXFileReference; lastKnownFileType = folder; name = settings; path = ../../../extension/settings; sourceTree = "<group>"; };
+		94FA3DF6306ABC8600026399 /* background.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = background.js; path = ../../../extension/background.js; sourceTree = "<group>"; };
+		94FA3DF7306ABC8600026399 /* images */ = {isa = PBXFileReference; lastKnownFileType = folder; name = images; path = ../../../extension/images; sourceTree = "<group>"; };
+		94FA3DF8306ABC8600026399 /* archive-url.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = "archive-url.js"; path = "../../../extension/archive-url.js"; sourceTree = "<group>"; };
+		94FA3DF9306ABC8600026399 /* manifest.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = manifest.json; path = ../../../extension/manifest.json; sourceTree = "<group>"; };
+		94FA3DFA306ABC8600026399 /* snapshot-probe.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = "snapshot-probe.js"; path = "../../../extension/snapshot-probe.js"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		9466330B3027353A00A64009 /* Frameworks */ = {
+		94FA3DA5306ABC8600026399 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
-		946633263027353C00A64009 /* Frameworks */ = {
+		94FA3DB7306ABC8600026399 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
+		};
+		94FA3DC3306ABC8600026399 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+			);
+		};
+		94FA3DCD306ABC8600026399 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+			);
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		946633053027353A00A64009 = {
+		94FA3D94306ABC8400026399 = {
 			isa = PBXGroup;
 			children = (
-				946633103027353A00A64009 /* Archive.ph Opener */,
-				9466332D3027353C00A64009 /* Archive.ph Opener Extension */,
-				9466330F3027353A00A64009 /* Products */,
+				94FA3D99306ABC8400026399 /* Shared (App) */,
+				94FA3DA2306ABC8600026399 /* Shared (Extension) */,
+				94FA3DAA306ABC8600026399 /* iOS (App) */,
+				94FA3DBB306ABC8600026399 /* macOS (App) */,
+				94FA3DCA306ABC8600026399 /* iOS (Extension) */,
+				94FA3DD4306ABC8600026399 /* macOS (Extension) */,
+				94FA3DA9306ABC8600026399 /* Products */,
 			);
 			sourceTree = "<group>";
 		};
-		9466330F3027353A00A64009 /* Products */ = {
+		94FA3D99306ABC8400026399 /* Shared (App) */ = {
 			isa = PBXGroup;
 			children = (
-				9466330E3027353A00A64009 /* Archive.ph Opener.app */,
-				946633293027353C00A64009 /* Archive.ph Opener Extension.appex */,
+				94FA3DA0306ABC8400026399 /* ViewController.swift */,
+				94FA3DA1306ABC8600026399 /* Assets.xcassets */,
+				94FA3D9A306ABC8400026399 /* Resources */,
 			);
-			name = Products;
+			path = "Shared (App)";
 			sourceTree = "<group>";
 		};
-		946633103027353A00A64009 /* Archive.ph Opener */ = {
+		94FA3D9A306ABC8400026399 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
-				946633113027353A00A64009 /* AppDelegate.swift */,
-				9466331D3027353A00A64009 /* ViewController.swift */,
-				9466331F3027353A00A64009 /* Main.storyboard */,
-				946633223027353B00A64009 /* Assets.xcassets */,
-				946633243027353B00A64009 /* Info.plist */,
-				946633133027353A00A64009 /* Resources */,
-			);
-			path = "Archive.ph Opener";
-			sourceTree = "<group>";
-		};
-		946633133027353A00A64009 /* Resources */ = {
-			isa = PBXGroup;
-			children = (
-				946633143027353A00A64009 /* Main.html */,
-				946633173027353A00A64009 /* Icon.png */,
-				946633193027353A00A64009 /* Style.css */,
-				9466331B3027353A00A64009 /* Script.js */,
+				94FA3D9B306ABC8400026399 /* Main.html */,
+				94FA3D9D306ABC8400026399 /* Icon.png */,
+				94FA3D9E306ABC8400026399 /* Style.css */,
+				94FA3D9F306ABC8400026399 /* Script.js */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
 		};
-		9466332D3027353C00A64009 /* Archive.ph Opener Extension */ = {
+		94FA3DA2306ABC8600026399 /* Shared (Extension) */ = {
 			isa = PBXGroup;
 			children = (
-				9466333A3027353C00A64009 /* Resources */,
-				9466332E3027353C00A64009 /* SafariWebExtensionHandler.swift */,
-				946633303027353C00A64009 /* Info.plist */,
+				94FA3DF4306ABC8600026399 /* Resources */,
+				94FA3DA3306ABC8600026399 /* SafariWebExtensionHandler.swift */,
 			);
-			path = "Archive.ph Opener Extension";
+			path = "Shared (Extension)";
 			sourceTree = "<group>";
 		};
-		9466333A3027353C00A64009 /* Resources */ = {
+		94FA3DA9306ABC8600026399 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				946633431027353C00A64009 /* archive-url.js */,
-				946633461027353C00A64009 /* snapshot-probe.js */,
-				9466333B3027353C00A64009 /* background.js */,
-				9466333C3027353C00A64009 /* images */,
-				9466333D3027353C00A64009 /* manifest.json */,
-				946633423027353C00A64009 /* settings */,
+				94FA3DA8306ABC8600026399 /* Archive.ph Opener.app */,
+				94FA3DBA306ABC8600026399 /* Archive.ph Opener.app */,
+				94FA3DC6306ABC8600026399 /* Archive.ph Opener Extension.appex */,
+				94FA3DD0306ABC8600026399 /* Archive.ph Opener Extension.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		94FA3DAA306ABC8600026399 /* iOS (App) */ = {
+			isa = PBXGroup;
+			children = (
+				94FA3DAB306ABC8600026399 /* AppDelegate.swift */,
+				94FA3DAD306ABC8600026399 /* SceneDelegate.swift */,
+				94FA3DAF306ABC8600026399 /* LaunchScreen.storyboard */,
+				94FA3DB2306ABC8600026399 /* Main.storyboard */,
+				94FA3DB5306ABC8600026399 /* Info.plist */,
+			);
+			path = "iOS (App)";
+			sourceTree = "<group>";
+		};
+		94FA3DBB306ABC8600026399 /* macOS (App) */ = {
+			isa = PBXGroup;
+			children = (
+				94FA3DBC306ABC8600026399 /* AppDelegate.swift */,
+				94FA3DBE306ABC8600026399 /* Main.storyboard */,
+				94FA3DC1306ABC8600026399 /* Info.plist */,
+			);
+			path = "macOS (App)";
+			sourceTree = "<group>";
+		};
+		94FA3DCA306ABC8600026399 /* iOS (Extension) */ = {
+			isa = PBXGroup;
+			children = (
+				94FA3DCB306ABC8600026399 /* Info.plist */,
+			);
+			path = "iOS (Extension)";
+			sourceTree = "<group>";
+		};
+		94FA3DD4306ABC8600026399 /* macOS (Extension) */ = {
+			isa = PBXGroup;
+			children = (
+				94FA3DD5306ABC8600026399 /* Info.plist */,
+			);
+			path = "macOS (Extension)";
+			sourceTree = "<group>";
+		};
+		94FA3DF4306ABC8600026399 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				94FA3DF5306ABC8600026399 /* settings */,
+				94FA3DF6306ABC8600026399 /* background.js */,
+				94FA3DF7306ABC8600026399 /* images */,
+				94FA3DF8306ABC8600026399 /* archive-url.js */,
+				94FA3DF9306ABC8600026399 /* manifest.json */,
+				94FA3DFA306ABC8600026399 /* snapshot-probe.js */,
 			);
 			name = Resources;
-			path = "Archive.ph Opener Extension";
+			path = "Shared (Extension)";
 			sourceTree = SOURCE_ROOT;
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		9466330D3027353A00A64009 /* Archive.ph Opener */ = {
+		94FA3DA7306ABC8600026399 /* Archive.ph Opener (iOS) */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 946633373027353C00A64009 /* Build configuration list for PBXNativeTarget "Archive.ph Opener" */;
+			buildConfigurationList = 94FA3DEA306ABC8600026399 /* Build configuration list for PBXNativeTarget "Archive.ph Opener (iOS)" */;
 			buildPhases = (
-				9466330A3027353A00A64009 /* Sources */,
-				9466330B3027353A00A64009 /* Frameworks */,
-				9466330C3027353A00A64009 /* Resources */,
-				946633363027353C00A64009 /* Embed Foundation Extensions */,
+				94FA3DA4306ABC8600026399 /* Sources */,
+				94FA3DA5306ABC8600026399 /* Frameworks */,
+				94FA3DA6306ABC8600026399 /* Resources */,
+				94FA3DE9306ABC8600026399 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
-				9466332C3027353C00A64009 /* PBXTargetDependency */,
+				94FA3DC9306ABC8600026399 /* PBXTargetDependency */,
 			);
-			name = "Archive.ph Opener";
-			packageProductDependencies = (
-			);
-			productName = "Archive.ph Opener";
-			productReference = 9466330E3027353A00A64009 /* Archive.ph Opener.app */;
+			name = "Archive.ph Opener (iOS)";
+			productName = "Archive.ph Opener (iOS)";
+			productReference = 94FA3DA8306ABC8600026399 /* Archive.ph Opener.app */;
 			productType = "com.apple.product-type.application";
 		};
-		946633283027353C00A64009 /* Archive.ph Opener Extension */ = {
+		94FA3DB9306ABC8600026399 /* Archive.ph Opener (macOS) */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 946633333027353C00A64009 /* Build configuration list for PBXNativeTarget "Archive.ph Opener Extension" */;
+			buildConfigurationList = 94FA3DF1306ABC8600026399 /* Build configuration list for PBXNativeTarget "Archive.ph Opener (macOS)" */;
 			buildPhases = (
-				946633253027353C00A64009 /* Sources */,
-				946633263027353C00A64009 /* Frameworks */,
-				946633273027353C00A64009 /* Resources */,
+				94FA3DB6306ABC8600026399 /* Sources */,
+				94FA3DB7306ABC8600026399 /* Frameworks */,
+				94FA3DB8306ABC8600026399 /* Resources */,
+				94FA3DF0306ABC8600026399 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				94FA3DD3306ABC8600026399 /* PBXTargetDependency */,
 			);
-			name = "Archive.ph Opener Extension";
-			packageProductDependencies = (
+			name = "Archive.ph Opener (macOS)";
+			productName = "Archive.ph Opener (macOS)";
+			productReference = 94FA3DBA306ABC8600026399 /* Archive.ph Opener.app */;
+			productType = "com.apple.product-type.application";
+		};
+		94FA3DC5306ABC8600026399 /* Archive.ph Opener Extension (iOS) */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 94FA3DE6306ABC8600026399 /* Build configuration list for PBXNativeTarget "Archive.ph Opener Extension (iOS)" */;
+			buildPhases = (
+				94FA3DC2306ABC8600026399 /* Sources */,
+				94FA3DC3306ABC8600026399 /* Frameworks */,
+				94FA3DC4306ABC8600026399 /* Resources */,
 			);
-			productName = "Archive.ph Opener Extension";
-			productReference = 946633293027353C00A64009 /* Archive.ph Opener Extension.appex */;
+			buildRules = (
+			);
+			name = "Archive.ph Opener Extension (iOS)";
+			productName = "Archive.ph Opener Extension (iOS)";
+			productReference = 94FA3DC6306ABC8600026399 /* Archive.ph Opener Extension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		94FA3DCF306ABC8600026399 /* Archive.ph Opener Extension (macOS) */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 94FA3DED306ABC8600026399 /* Build configuration list for PBXNativeTarget "Archive.ph Opener Extension (macOS)" */;
+			buildPhases = (
+				94FA3DCC306ABC8600026399 /* Sources */,
+				94FA3DCD306ABC8600026399 /* Frameworks */,
+				94FA3DCE306ABC8600026399 /* Resources */,
+			);
+			buildRules = (
+			);
+			name = "Archive.ph Opener Extension (macOS)";
+			productName = "Archive.ph Opener Extension (macOS)";
+			productReference = 94FA3DD0306ABC8600026399 /* Archive.ph Opener Extension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		946633063027353A00A64009 /* Project object */ = {
+		94FA3D95306ABC8400026399 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 2660;
-				LastUpgradeCheck = 2660;
+				LastSwiftUpdateCheck = 2700;
+				LastUpgradeCheck = 2700;
 				TargetAttributes = {
-					9466330D3027353A00A64009 = {
-						CreatedOnToolsVersion = 26.6;
+					94FA3DA7306ABC8600026399 = {
+						CreatedOnToolsVersion = 27.0;
 					};
-					946633283027353C00A64009 = {
-						CreatedOnToolsVersion = 26.6;
+					94FA3DB9306ABC8600026399 = {
+						CreatedOnToolsVersion = 27.0;
+					};
+					94FA3DC5306ABC8600026399 = {
+						CreatedOnToolsVersion = 27.0;
+					};
+					94FA3DCF306ABC8600026399 = {
+						CreatedOnToolsVersion = 27.0;
 					};
 				};
 			};
-			buildConfigurationList = 946633093027353A00A64009 /* Build configuration list for PBXProject "Archive.ph Opener" */;
+			buildConfigurationList = 94FA3D98306ABC8400026399 /* Build configuration list for PBXProject "Archive.ph Opener" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
 				Base,
 			);
-			mainGroup = 946633053027353A00A64009;
+			mainGroup = 94FA3D94306ABC8400026399;
 			minimizedProjectReferenceProxies = 1;
 			preferredProjectObjectVersion = 77;
-			productRefGroup = 9466330F3027353A00A64009 /* Products */;
+			productRefGroup = 94FA3DA9306ABC8600026399 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				9466330D3027353A00A64009 /* Archive.ph Opener */,
-				946633283027353C00A64009 /* Archive.ph Opener Extension */,
+				94FA3DA7306ABC8600026399 /* Archive.ph Opener (iOS) */,
+				94FA3DB9306ABC8600026399 /* Archive.ph Opener (macOS) */,
+				94FA3DC5306ABC8600026399 /* Archive.ph Opener Extension (iOS) */,
+				94FA3DCF306ABC8600026399 /* Archive.ph Opener Extension (macOS) */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		9466330C3027353A00A64009 /* Resources */ = {
+		94FA3DA6306ABC8600026399 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
-				946633183027353A00A64009 /* Icon.png in Resources */,
-				946633213027353A00A64009 /* Main.storyboard in Resources */,
-				9466331C3027353A00A64009 /* Script.js in Resources */,
-				946633163027353A00A64009 /* Main.html in Resources */,
-				946633233027353B00A64009 /* Assets.xcassets in Resources */,
-				9466331A3027353A00A64009 /* Style.css in Resources */,
+				94FA3DD8306ABC8600026399 /* Icon.png in Resources */,
+				94FA3DB1306ABC8600026399 /* LaunchScreen.storyboard in Resources */,
+				94FA3DD6306ABC8600026399 /* Main.html in Resources */,
+				94FA3DDC306ABC8600026399 /* Script.js in Resources */,
+				94FA3DE0306ABC8600026399 /* Assets.xcassets in Resources */,
+				94FA3DB4306ABC8600026399 /* Main.storyboard in Resources */,
+				94FA3DDA306ABC8600026399 /* Style.css in Resources */,
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
-		946633273027353C00A64009 /* Resources */ = {
+		94FA3DB8306ABC8600026399 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
-				9466333F3027353C00A64009 /* images in Resources */,
-				946633403027353C00A64009 /* manifest.json in Resources */,
-				9466333E3027353C00A64009 /* background.js in Resources */,
-				946633441027353C00A64009 /* archive-url.js in Resources */,
-				946633451027353C00A64009 /* snapshot-probe.js in Resources */,
-				946633413027353C00A64009 /* settings in Resources */,
+				94FA3DD9306ABC8600026399 /* Icon.png in Resources */,
+				94FA3DDB306ABC8600026399 /* Style.css in Resources */,
+				94FA3DC0306ABC8600026399 /* Main.storyboard in Resources */,
+				94FA3DDD306ABC8600026399 /* Script.js in Resources */,
+				94FA3DE1306ABC8600026399 /* Assets.xcassets in Resources */,
+				94FA3DD7306ABC8600026399 /* Main.html in Resources */,
 			);
-			runOnlyForDeploymentPostprocessing = 0;
+		};
+		94FA3DC4306ABC8600026399 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+				94FA3E03306ABC8600026399 /* images in Resources */,
+				94FA3E02306ABC8600026399 /* background.js in Resources */,
+				94FA3E05306ABC8600026399 /* manifest.json in Resources */,
+				94FA3E06306ABC8600026399 /* snapshot-probe.js in Resources */,
+				94FA3E01306ABC8600026399 /* settings in Resources */,
+				94FA3E04306ABC8600026399 /* archive-url.js in Resources */,
+			);
+		};
+		94FA3DCE306ABC8600026399 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+				94FA3DFD306ABC8600026399 /* images in Resources */,
+				94FA3DFC306ABC8600026399 /* background.js in Resources */,
+				94FA3DFF306ABC8600026399 /* manifest.json in Resources */,
+				94FA3E00306ABC8600026399 /* snapshot-probe.js in Resources */,
+				94FA3DFB306ABC8600026399 /* settings in Resources */,
+				94FA3DFE306ABC8600026399 /* archive-url.js in Resources */,
+			);
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		9466330A3027353A00A64009 /* Sources */ = {
+		94FA3DA4306ABC8600026399 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
-				9466331E3027353A00A64009 /* ViewController.swift in Sources */,
-				946633123027353A00A64009 /* AppDelegate.swift in Sources */,
+				94FA3DDE306ABC8600026399 /* ViewController.swift in Sources */,
+				94FA3DAC306ABC8600026399 /* AppDelegate.swift in Sources */,
+				94FA3DAE306ABC8600026399 /* SceneDelegate.swift in Sources */,
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
-		946633253027353C00A64009 /* Sources */ = {
+		94FA3DB6306ABC8600026399 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
-				9466332F3027353C00A64009 /* SafariWebExtensionHandler.swift in Sources */,
+				94FA3DDF306ABC8600026399 /* ViewController.swift in Sources */,
+				94FA3DBD306ABC8600026399 /* AppDelegate.swift in Sources */,
 			);
-			runOnlyForDeploymentPostprocessing = 0;
+		};
+		94FA3DC2306ABC8600026399 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+				94FA3DE2306ABC8600026399 /* SafariWebExtensionHandler.swift in Sources */,
+			);
+		};
+		94FA3DCC306ABC8600026399 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+				94FA3DE3306ABC8600026399 /* SafariWebExtensionHandler.swift in Sources */,
+			);
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		9466332C3027353C00A64009 /* PBXTargetDependency */ = {
+		94FA3DC9306ABC8600026399 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 946633283027353C00A64009 /* Archive.ph Opener Extension */;
-			targetProxy = 9466332B3027353C00A64009 /* PBXContainerItemProxy */;
+			target = 94FA3DC5306ABC8600026399 /* Archive.ph Opener Extension (iOS) */;
+			targetProxy = 94FA3DC8306ABC8600026399 /* PBXContainerItemProxy */;
+		};
+		94FA3DD3306ABC8600026399 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 94FA3DCF306ABC8600026399 /* Archive.ph Opener Extension (macOS) */;
+			targetProxy = 94FA3DD2306ABC8600026399 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
 /* Begin PBXVariantGroup section */
-		946633143027353A00A64009 /* Main.html */ = {
+		94FA3D9B306ABC8400026399 /* Main.html */ = {
 			isa = PBXVariantGroup;
 			children = (
-				946633153027353A00A64009 /* Base */,
+				94FA3D9C306ABC8400026399 /* Base */,
 			);
 			name = Main.html;
 			sourceTree = "<group>";
 		};
-		9466331F3027353A00A64009 /* Main.storyboard */ = {
+		94FA3DAF306ABC8600026399 /* LaunchScreen.storyboard */ = {
 			isa = PBXVariantGroup;
 			children = (
-				946633203027353A00A64009 /* Base */,
+				94FA3DB0306ABC8600026399 /* Base */,
+			);
+			name = LaunchScreen.storyboard;
+			sourceTree = "<group>";
+		};
+		94FA3DB2306ABC8600026399 /* Main.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				94FA3DB3306ABC8600026399 /* Base */,
+			);
+			name = Main.storyboard;
+			sourceTree = "<group>";
+		};
+		94FA3DBE306ABC8600026399 /* Main.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				94FA3DBF306ABC8600026399 /* Base */,
 			);
 			name = Main.storyboard;
 			sourceTree = "<group>";
@@ -313,7 +485,7 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
-		946633313027353C00A64009 /* Debug */ = {
+		94FA3DE4306ABC8600026399 /* Debug configuration for PBXProject "Archive.ph Opener" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -366,17 +538,15 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 26.5;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
-				SDKROOT = macosx;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
 			name = Debug;
 		};
-		946633323027353C00A64009 /* Release */ = {
+		94FA3DE5306ABC8600026399 /* Release configuration for PBXProject "Archive.ph Opener" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -423,15 +593,161 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 26.5;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
-				SDKROOT = macosx;
 				SWIFT_COMPILATION_MODE = wholemodule;
 			};
 			name = Release;
 		};
-		946633343027353C00A64009 /* Debug */ = {
+		94FA3DE7306ABC8600026399 /* Debug configuration for PBXNativeTarget "Archive.ph Opener Extension (iOS)" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "iOS (Extension)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Archive.ph Opener Extension";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = ie.boboco.ArchivePhOpener.Extension;
+				PRODUCT_NAME = "Archive.ph Opener Extension";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		94FA3DE8306ABC8600026399 /* Release configuration for PBXNativeTarget "Archive.ph Opener Extension (iOS)" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "iOS (Extension)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Archive.ph Opener Extension";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = ie.boboco.ArchivePhOpener.Extension;
+				PRODUCT_NAME = "Archive.ph Opener Extension";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		94FA3DEB306ABC8600026399 /* Debug configuration for PBXNativeTarget "Archive.ph Opener (iOS)" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "iOS (App)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Archive.ph Opener";
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
+				INFOPLIST_KEY_UIMainStoryboardFile = Main;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+					"-framework",
+					WebKit,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = ie.boboco.ArchivePhOpener;
+				PRODUCT_NAME = "Archive.ph Opener";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		94FA3DEC306ABC8600026399 /* Release configuration for PBXNativeTarget "Archive.ph Opener (iOS)" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "iOS (App)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Archive.ph Opener";
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
+				INFOPLIST_KEY_UIMainStoryboardFile = Main;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+					"-framework",
+					WebKit,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = ie.boboco.ArchivePhOpener;
+				PRODUCT_NAME = "Archive.ph Opener";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		94FA3DEE306ABC8600026399 /* Debug configuration for PBXNativeTarget "Archive.ph Opener Extension (macOS)" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
@@ -440,7 +756,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = "Archive.ph Opener Extension/Info.plist";
+				INFOPLIST_FILE = "macOS (Extension)/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Archive.ph Opener Extension";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -448,14 +764,15 @@
 					"@executable_path/../Frameworks",
 					"@executable_path/../../../../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.14;
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				MARKETING_VERSION = 1.0;
 				OTHER_LDFLAGS = (
 					"-framework",
 					SafariServices,
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "com.yourCompany.Archive-ph-Opener.Extension";
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = ie.boboco.ArchivePhOpener.Extension;
+				PRODUCT_NAME = "Archive.ph Opener Extension";
+				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -465,7 +782,7 @@
 			};
 			name = Debug;
 		};
-		946633353027353C00A64009 /* Release */ = {
+		94FA3DEF306ABC8600026399 /* Release configuration for PBXNativeTarget "Archive.ph Opener Extension (macOS)" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
@@ -474,7 +791,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = "Archive.ph Opener Extension/Info.plist";
+				INFOPLIST_FILE = "macOS (Extension)/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Archive.ph Opener Extension";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -482,14 +799,15 @@
 					"@executable_path/../Frameworks",
 					"@executable_path/../../../../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.14;
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				MARKETING_VERSION = 1.0;
 				OTHER_LDFLAGS = (
 					"-framework",
 					SafariServices,
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "com.yourCompany.Archive-ph-Opener.Extension";
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = ie.boboco.ArchivePhOpener.Extension;
+				PRODUCT_NAME = "Archive.ph Opener Extension";
+				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -499,28 +817,27 @@
 			};
 			name = Release;
 		};
-		946633383027353C00A64009 /* Debug */ = {
+		94FA3DF2306ABC8600026399 /* Debug configuration for PBXNativeTarget "Archive.ph Opener (macOS)" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = "Archive.ph Opener/Info.plist";
+				INFOPLIST_FILE = "macOS (App)/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Archive.ph Opener";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMainStoryboardFile = Main;
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				MARKETING_VERSION = 1.0;
 				OTHER_LDFLAGS = (
 					"-framework",
@@ -528,9 +845,10 @@
 					"-framework",
 					WebKit,
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "com.yourCompany.Archive-ph-Opener";
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = ie.boboco.ArchivePhOpener;
+				PRODUCT_NAME = "Archive.ph Opener";
 				REGISTER_APP_GROUPS = YES;
+				SDKROOT = macosx;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
@@ -540,28 +858,27 @@
 			};
 			name = Debug;
 		};
-		946633393027353C00A64009 /* Release */ = {
+		94FA3DF3306ABC8600026399 /* Release configuration for PBXNativeTarget "Archive.ph Opener (macOS)" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = "Archive.ph Opener/Info.plist";
+				INFOPLIST_FILE = "macOS (App)/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Archive.ph Opener";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMainStoryboardFile = Main;
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				MARKETING_VERSION = 1.0;
 				OTHER_LDFLAGS = (
 					"-framework",
@@ -569,9 +886,10 @@
 					"-framework",
 					WebKit,
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "com.yourCompany.Archive-ph-Opener";
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = ie.boboco.ArchivePhOpener;
+				PRODUCT_NAME = "Archive.ph Opener";
 				REGISTER_APP_GROUPS = YES;
+				SDKROOT = macosx;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
@@ -584,34 +902,48 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		946633093027353A00A64009 /* Build configuration list for PBXProject "Archive.ph Opener" */ = {
+		94FA3D98306ABC8400026399 /* Build configuration list for PBXProject "Archive.ph Opener" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				946633313027353C00A64009 /* Debug */,
-				946633323027353C00A64009 /* Release */,
+				94FA3DE4306ABC8600026399 /* Debug configuration for PBXProject "Archive.ph Opener" */,
+				94FA3DE5306ABC8600026399 /* Release configuration for PBXProject "Archive.ph Opener" */,
 			);
-			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		946633333027353C00A64009 /* Build configuration list for PBXNativeTarget "Archive.ph Opener Extension" */ = {
+		94FA3DE6306ABC8600026399 /* Build configuration list for PBXNativeTarget "Archive.ph Opener Extension (iOS)" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				946633343027353C00A64009 /* Debug */,
-				946633353027353C00A64009 /* Release */,
+				94FA3DE7306ABC8600026399 /* Debug configuration for PBXNativeTarget "Archive.ph Opener Extension (iOS)" */,
+				94FA3DE8306ABC8600026399 /* Release configuration for PBXNativeTarget "Archive.ph Opener Extension (iOS)" */,
 			);
-			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		946633373027353C00A64009 /* Build configuration list for PBXNativeTarget "Archive.ph Opener" */ = {
+		94FA3DEA306ABC8600026399 /* Build configuration list for PBXNativeTarget "Archive.ph Opener (iOS)" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				946633383027353C00A64009 /* Debug */,
-				946633393027353C00A64009 /* Release */,
+				94FA3DEB306ABC8600026399 /* Debug configuration for PBXNativeTarget "Archive.ph Opener (iOS)" */,
+				94FA3DEC306ABC8600026399 /* Release configuration for PBXNativeTarget "Archive.ph Opener (iOS)" */,
 			);
-			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		94FA3DED306ABC8600026399 /* Build configuration list for PBXNativeTarget "Archive.ph Opener Extension (macOS)" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				94FA3DEE306ABC8600026399 /* Debug configuration for PBXNativeTarget "Archive.ph Opener Extension (macOS)" */,
+				94FA3DEF306ABC8600026399 /* Release configuration for PBXNativeTarget "Archive.ph Opener Extension (macOS)" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		94FA3DF1306ABC8600026399 /* Build configuration list for PBXNativeTarget "Archive.ph Opener (macOS)" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				94FA3DF2306ABC8600026399 /* Debug configuration for PBXNativeTarget "Archive.ph Opener (macOS)" */,
+				94FA3DF3306ABC8600026399 /* Release configuration for PBXNativeTarget "Archive.ph Opener (macOS)" */,
+			);
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
-	rootObject = 946633063027353A00A64009 /* Project object */;
+	rootObject = 94FA3D95306ABC8400026399 /* Project object */;
+	validationLevel = 1;
 }

@@ -1,8 +1,8 @@
 //
 //  AppDelegate.swift
-//  Archive.ph Opener
+//  macOS (App)
 //
-//  Created by Eric Bowman on 08.08.26.
+//  Created by Eric Bowman on 28.09.26.
 //
 
 import Cocoa

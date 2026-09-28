@@ -1,8 +1,8 @@
 //
 //  SafariWebExtensionHandler.swift
-//  Archive.ph Opener Extension
+//  Shared (Extension)
 //
-//  Created by Eric Bowman on 08.08.26.
+//  Created by Eric Bowman on 28.09.26.
 //
 
 import SafariServices

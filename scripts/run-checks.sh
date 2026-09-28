@@ -41,6 +41,34 @@ run_gate_tail() {
 
 # --- Fast gates first -------------------------------------------------
 
+XCODE_PBXPROJ="app/Archive.ph Opener/Archive.ph Opener.xcodeproj/project.pbxproj"
+
+run_gate "Xcode project: no leaked absolute paths, placeholder bundle id, or missing wiring" \
+  bash -c '
+    set -euo pipefail
+    pbxproj="$1"
+    if [[ ! -f "${pbxproj}" ]]; then
+      echo "missing ${pbxproj}" >&2
+      exit 1
+    fi
+    if grep -q "/Users/" "${pbxproj}"; then
+      echo "found a leaked absolute /Users/ path in ${pbxproj}" >&2
+      exit 1
+    fi
+    if grep -q "yourCompany" "${pbxproj}"; then
+      echo "found the placeholder yourCompany bundle id in ${pbxproj}" >&2
+      exit 1
+    fi
+    if ! grep -q "\.\./\.\./\.\./extension/manifest\.json" "${pbxproj}"; then
+      echo "missing ../../../extension/manifest.json file reference in ${pbxproj}" >&2
+      exit 1
+    fi
+    if ! grep -qF "PRODUCT_BUNDLE_IDENTIFIER = ie.boboco.ArchivePhOpener.Extension" "${pbxproj}"; then
+      echo "missing PRODUCT_BUNDLE_IDENTIFIER = ie.boboco.ArchivePhOpener.Extension in ${pbxproj}" >&2
+      exit 1
+    fi
+  ' _ "${XCODE_PBXPROJ}"
+
 run_gate "manifest.json is valid JSON" \
   bash -c 'python3 -m json.tool extension/manifest.json >/dev/null'
 

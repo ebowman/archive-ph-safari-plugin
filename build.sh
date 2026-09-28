@@ -30,7 +30,7 @@ XCODEPROJ="$(find "${REPO_ROOT}/app" -maxdepth 2 -name "*.xcodeproj" -print -qui
 
 if [[ -z "${XCODEPROJ}" ]]; then
   echo "error: no .xcodeproj found under ${REPO_ROOT}/app" >&2
-  echo "Run: xcrun safari-web-extension-converter extension/ --project-location app/ --app-name \"Archive.ph Opener\" --macos-only --no-open --force" >&2
+  echo "Run: ./scripts/regenerate-xcode-project.sh" >&2
   exit 1
 fi
 
