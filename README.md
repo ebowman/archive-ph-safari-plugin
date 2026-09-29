@@ -140,6 +140,15 @@ pluginkit -m -v -i ie.boboco.ArchivePhOpener.Extension
 Fix it by running `./install.sh`, which removes the `app/build` copy and
 re-registers only the `/Applications` copy, then restart Safari.
 
+**Tapping/clicking the extension does nothing.**
+Safari withholds the current tab's URL from the extension until it has
+per-site access, so a tap/click on a page it hasn't been granted access to
+silently does nothing. Newer builds open a settings notice explaining this;
+either way, grant access directly:
+On iPhone/iPad: Settings → Apps → Safari → Extensions → Archive.ph
+Opener → All Websites → Allow. On Mac: click the extension's toolbar
+button and choose Always Allow (or Settings → Extensions in Safari).
+
 ## How it works
 
 - `extension/` contains the WebExtension source: `manifest.json`,

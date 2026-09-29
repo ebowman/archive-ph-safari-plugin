@@ -43,17 +43,24 @@ function assertTrue(name, condition) {
 // engine's domain lists (bead 6kl.4); storageGetShouldReject, when true,
 // makes every storage.local.get call reject (asserting the engine's
 // read-failure-is-empty-list contract in case (h)).
+// tabsGetResult, when provided, is the tab object api.tabs.get(tabId)
+// resolves to (bead 5xt.13's handleActionForTab retry when the clicked
+// tab arrives without a url); tabsGetShouldReject, when true, makes
+// api.tabs.get reject instead.
 function makeMockChrome({
   newTabSetting,
   alwaysArchiveDomains,
   alwaysOriginalDomains,
   storageGetShouldReject,
+  tabsGetResult,
+  tabsGetShouldReject,
 } = {}) {
   let nextTabId = 100;
 
   const calls = {
     tabsUpdate: [], // { tabId, url }
     tabsCreate: [], // { url }
+    tabsGet: [], // tabId
   };
 
   let onClickedListener = null;
@@ -79,6 +86,13 @@ function makeMockChrome({
         const id = nextTabId++;
         calls.tabsCreate.push({ url: createInfo.url, id });
         return Promise.resolve({ id });
+      },
+      get(tabId) {
+        calls.tabsGet.push(tabId);
+        if (tabsGetShouldReject) {
+          return Promise.reject(new Error("tabs.get failed"));
+        }
+        return Promise.resolve(tabsGetResult !== undefined ? tabsGetResult : { id: tabId });
       },
       onRemoved: {
         addListener(fn) {
@@ -129,6 +143,9 @@ function makeMockChrome({
     },
     runtime: {
       lastError: undefined,
+      getURL(pathArg) {
+        return "safari-web-extension://test/" + pathArg;
+      },
       onMessage: {
         addListener(fn) {
           onMessageListener = fn;
@@ -173,12 +190,16 @@ function loadBackground({
   alwaysArchiveDomains,
   alwaysOriginalDomains,
   storageGetShouldReject,
+  tabsGetResult,
+  tabsGetShouldReject,
 } = {}) {
   const harness = makeMockChrome({
     newTabSetting,
     alwaysArchiveDomains,
     alwaysOriginalDomains,
     storageGetShouldReject,
+    tabsGetResult,
+    tabsGetShouldReject,
   });
 
   const sandbox = {
@@ -223,8 +244,11 @@ function loadBackground({
 // async functions.
 async function flush() {
   // A handful of microtask turns is enough to drain the async chains used
-  // in background.js (pickMirror -> shouldUseNewTab -> tabs.create/update).
-  for (let i = 0; i < 10; i++) {
+  // in background.js (handleActionForTab's optional tabs.get retry ->
+  // pickMirror -> shouldUseNewTab -> tabs.create/update). 20 turns leaves
+  // headroom above the ~12 measured for the longest chain currently
+  // exercised (the tabs.get retry path added by bead 5xt.13).
+  for (let i = 0; i < 20; i++) {
     await Promise.resolve();
   }
 }
@@ -340,6 +364,58 @@ async function testToolbarStorageRejectionDefaultsToSameTab() {
   } finally {
     process.removeListener("unhandledRejection", onUnhandledRejection);
   }
+}
+
+// --- (i) toolbar click with tab.url missing -> handleActionForTab retries
+//     via api.tabs.get(tab.id); when that retry returns a url, archiving
+//     proceeds normally (bead 5xt.13) ---------------------------------------
+//
+// Mirrors the real Safari-iOS scenario the bead fixes: the action.onClicked
+// callback fires with a url-less tab object (per-site access still being
+// resolved), but a subsequent tabs.get for the same tabId comes back with
+// the url populated.
+
+async function testActionClickRetriesTabsGetWhenUrlMissing() {
+  const h = loadBackground({
+    newTabSetting: false,
+    tabsGetResult: { id: 7, url: "https://example.com/a" },
+  });
+  const listener = h.getOnClickedListener();
+  listener({ id: 7 });
+  await flush();
+
+  check("(i) tabs.get called once", h.calls.tabsGet.length, 1);
+  check("(i) tabs.get called with the clicked tab id", h.calls.tabsGet[0], 7);
+  check("(i) tabs.create not called", h.calls.tabsCreate.length, 0);
+  check("(i) tabs.update called once", h.calls.tabsUpdate.length, 1);
+  check("(i) tabs.update targets the clicked tab", h.calls.tabsUpdate[0] && h.calls.tabsUpdate[0].tabId, 7);
+  check(
+    "(i) tabs.update url is archive.ph/newest/<url>",
+    h.calls.tabsUpdate[0] && h.calls.tabsUpdate[0].url,
+    "https://archive.ph/newest/https://example.com/a"
+  );
+}
+
+// --- (j) toolbar click with tab.url missing and the tabs.get retry still
+//     url-less -> opens settings/settings.html?needs-access=1 in a new tab
+//     instead of silently doing nothing (bead 5xt.13) ----------------------
+
+async function testActionClickOpensSettingsWhenUrlStillMissing() {
+  const h = loadBackground({
+    tabsGetResult: { id: 9 }, // no url even after the retry
+  });
+  const listener = h.getOnClickedListener();
+  listener({ id: 9 });
+  await flush();
+
+  check("(j) tabs.get called once", h.calls.tabsGet.length, 1);
+  check("(j) tabs.update not called", h.calls.tabsUpdate.length, 0);
+  check("(j) tabs.create called once", h.calls.tabsCreate.length, 1);
+  assertTrue(
+    "(j) tabs.create url ends with settings/settings.html?needs-access=1",
+    h.calls.tabsCreate[0] &&
+      h.calls.tabsCreate[0].url.endsWith("settings/settings.html?needs-access=1")
+  );
 }
 
 // --- (b) archive URL + newTab=false -> tabs.update on same tab -----------
@@ -1263,6 +1339,8 @@ async function main() {
   await testNormalPageDefaultNewTab();
   await testStorageGetReturnsEmptyObjectDefaultsToSameTab();
   await testToolbarStorageRejectionDefaultsToSameTab();
+  await testActionClickRetriesTabsGetWhenUrlMissing();
+  await testActionClickOpensSettingsWhenUrlStillMissing();
   await testDeArchiveSameTab();
   await testDeArchiveNewTab();
   await testBareShortCodeNoOp();

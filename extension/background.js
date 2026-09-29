@@ -205,8 +205,34 @@ function deArchiveSafe(originalUrl, options) {
   deArchive(originalUrl, options).catch(() => {});
 }
 
-api.action.onClicked.addListener((tab) => {
-  if (!tab || !tab.url) return;
+// Handles a toolbar-button click for `tab` (extracted from the
+// action.onClicked listener so a later bead -- the iOS popup, per bead
+// 5xt.14 -- can call it directly). Safari withholds tab.url from the
+// action.onClicked callback when the extension hasn't been granted
+// per-site access to that page (see bead 5xt.13); iOS Safari has no
+// activeTab-triggered permission prompt path here without a retry, so on a
+// missing url we retry once via api.tabs.get(tab.id) (which can return a
+// fresher tab object with the url populated after Safari's own access
+// check), and if the url is still missing after that we don't silently
+// give up -- we open the settings page with ?needs-access=1 so the user
+// sees an explanation and a path to fix it (Settings > Apps > Safari >
+// Extensions > ... > All Websites > Allow) instead of a dead tap.
+async function handleActionForTab(tab) {
+  if (!tab) return;
+
+  if (!tab.url && typeof tab.id === "number" && api.tabs && api.tabs.get) {
+    try {
+      tab = await api.tabs.get(tab.id);
+    } catch {
+      // Leave tab as-is; the missing-url branch below handles it.
+    }
+  }
+
+  if (!tab || !tab.url) {
+    const url = api.runtime.getURL("settings/settings.html") + "?needs-access=1";
+    await api.tabs.create({ url });
+    return;
+  }
 
   if (ArchiveUrl.isArchiveUrl(tab.url)) {
     const original = ArchiveUrl.extractOriginalUrl(tab.url);
@@ -227,6 +253,10 @@ api.action.onClicked.addListener((tab) => {
   }
 
   openArchiveSafe(tab.url, { tabId: tab.id });
+}
+
+api.action.onClicked.addListener((tab) => {
+  handleActionForTab(tab).catch(() => {});
 });
 
 // ---------------------------------------------------------------------------

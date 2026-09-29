@@ -83,6 +83,16 @@ label {
   font-size: 12px;
 }
 
+.notice.needs-access {
+  margin: 0 0 16px 0;
+  padding: 10px 12px;
+  color: #1d1d1f;
+  background: #fff4e5;
+  border: 1px solid #f0c987;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
 .notice-message {
   margin: 8px 0 0 0;
   color: #6e6e73;
@@ -192,6 +202,12 @@ label {
 
   .notice-message {
     color: #a1a1a6;
+  }
+
+  .notice.needs-access {
+    color: #f5f5f7;
+    background: #4a3b1a;
+    border-color: #7a5f2a;
   }
 
   .domain-list li {
