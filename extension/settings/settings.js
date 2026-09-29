@@ -235,7 +235,29 @@
     });
   }
 
+  // Shows a one-paragraph notice at the top of the settings page when the
+  // page was opened via handleActionForTab's needs-access fallback (bead
+  // 5xt.13): the toolbar click landed on a tab Safari withheld tab.url for
+  // (no per-site access granted), so this explains why nothing happened
+  // and how to fix it, instead of leaving the user with a silent no-op tap.
+  function maybeShowNeedsAccessNotice() {
+    if (!new URLSearchParams(location.search).has("needs-access")) return;
+
+    const form = document.getElementById("settings-form");
+    if (!form) return;
+
+    const notice = document.createElement("p");
+    notice.className = "notice needs-access";
+    notice.textContent =
+      "Safari has not given Archive.ph Opener access to this website. " +
+      "On iPhone or iPad: Settings > Apps > Safari > Extensions > " +
+      "Archive.ph Opener > All Websites > Allow. On Mac: click the " +
+      "extension's toolbar button and choose Always Allow.";
+    form.insertBefore(notice, form.firstChild);
+  }
+
   function init() {
+    maybeShowNeedsAccessNotice();
     wireNewTabCheckbox();
     wireDomainLists();
 

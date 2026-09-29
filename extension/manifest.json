@@ -3,7 +3,7 @@
   "name": "Archive.ph Opener",
   "version": "0.1.0",
   "description": "Opens the current tab's URL in archive.ph.",
-  "permissions": ["tabs", "contextMenus", "storage"],
+  "permissions": ["tabs", "contextMenus", "storage", "activeTab"],
   "host_permissions": [
     "https://archive.ph/*",
     "https://archive.today/*",

@@ -43,17 +43,35 @@ function assertTrue(name, condition) {
 // engine's domain lists (bead 6kl.4); storageGetShouldReject, when true,
 // makes every storage.local.get call reject (asserting the engine's
 // read-failure-is-empty-list contract in case (h)).
+// tabsGetResult, when provided, is the tab object api.tabs.get(tabId)
+// resolves to (bead 5xt.13's handleActionForTab retry when the clicked
+// tab arrives without a url); tabsGetShouldReject, when true, makes
+// api.tabs.get reject instead.
+// tabsQueryResult, when provided, is the array api.tabs.query(...) resolves
+// to (bead 5xt.14's popup message path, resolvePopupTab's active-tab
+// fallback when no tabId is given); defaults to an empty array.
+// getPlatformInfoResult, when provided, is what api.runtime.getPlatformInfo()
+// resolves to (bead 5xt.14's iOS-only setPopup call); defaults to
+// {os: "mac"} so existing tests never trip the iOS-only setPopup branch
+// unless a test opts in.
 function makeMockChrome({
   newTabSetting,
   alwaysArchiveDomains,
   alwaysOriginalDomains,
   storageGetShouldReject,
+  tabsGetResult,
+  tabsGetShouldReject,
+  tabsQueryResult,
+  getPlatformInfoResult,
 } = {}) {
   let nextTabId = 100;
 
   const calls = {
     tabsUpdate: [], // { tabId, url }
     tabsCreate: [], // { url }
+    tabsGet: [], // tabId
+    tabsQuery: [], // queryInfo
+    actionSetPopup: [], // { popup }
   };
 
   let onClickedListener = null;
@@ -70,6 +88,9 @@ function makeMockChrome({
           onClickedListener = fn;
         },
       },
+      setPopup(details) {
+        calls.actionSetPopup.push(details);
+      },
     },
     tabs: {
       update(tabId, updateInfo) {
@@ -79,6 +100,17 @@ function makeMockChrome({
         const id = nextTabId++;
         calls.tabsCreate.push({ url: createInfo.url, id });
         return Promise.resolve({ id });
+      },
+      get(tabId) {
+        calls.tabsGet.push(tabId);
+        if (tabsGetShouldReject) {
+          return Promise.reject(new Error("tabs.get failed"));
+        }
+        return Promise.resolve(tabsGetResult !== undefined ? tabsGetResult : { id: tabId });
+      },
+      query(queryInfo) {
+        calls.tabsQuery.push(queryInfo);
+        return Promise.resolve(tabsQueryResult !== undefined ? tabsQueryResult : []);
       },
       onRemoved: {
         addListener(fn) {
@@ -129,6 +161,14 @@ function makeMockChrome({
     },
     runtime: {
       lastError: undefined,
+      getURL(pathArg) {
+        return "safari-web-extension://test/" + pathArg;
+      },
+      getPlatformInfo() {
+        return Promise.resolve(
+          getPlatformInfoResult !== undefined ? getPlatformInfoResult : { os: "mac" }
+        );
+      },
       onMessage: {
         addListener(fn) {
           onMessageListener = fn;
@@ -165,6 +205,21 @@ async function dispatchMessage(h, message, tabId, senderTabUrl) {
   await flush();
 }
 
+// Simulates a runtime.onMessage dispatch from the popup (bead 5xt.14),
+// which runs in an extension page context rather than a content script, so
+// (unlike dispatchMessage above) there's no sender.tab -- the popup relies
+// entirely on message.tabId / the background's active-tab fallback (see
+// resolvePopupTab in background.js). Awaits and returns the listener's
+// resolved response (background.js's handler branches return their
+// handler's promise directly, not a fire-and-forget .catch()), then flushes
+// remaining microtasks so any chained tabs/storage calls settle.
+async function dispatchPopupMessage(h, message) {
+  const listener = h.getOnMessageListener();
+  const response = await listener(message, {});
+  await flush();
+  return response;
+}
+
 // Loads archive-url.js then background.js into one fresh vm context wired
 // to the given mock chrome global. Returns the harness handles plus the
 // sandbox (for globalThis inspection, unused today but handy for debugging).
@@ -173,12 +228,20 @@ function loadBackground({
   alwaysArchiveDomains,
   alwaysOriginalDomains,
   storageGetShouldReject,
+  tabsGetResult,
+  tabsGetShouldReject,
+  tabsQueryResult,
+  getPlatformInfoResult,
 } = {}) {
   const harness = makeMockChrome({
     newTabSetting,
     alwaysArchiveDomains,
     alwaysOriginalDomains,
     storageGetShouldReject,
+    tabsGetResult,
+    tabsGetShouldReject,
+    tabsQueryResult,
+    getPlatformInfoResult,
   });
 
   const sandbox = {
@@ -223,8 +286,11 @@ function loadBackground({
 // async functions.
 async function flush() {
   // A handful of microtask turns is enough to drain the async chains used
-  // in background.js (pickMirror -> shouldUseNewTab -> tabs.create/update).
-  for (let i = 0; i < 10; i++) {
+  // in background.js (handleActionForTab's optional tabs.get retry ->
+  // pickMirror -> shouldUseNewTab -> tabs.create/update). 20 turns leaves
+  // headroom above the ~12 measured for the longest chain currently
+  // exercised (the tabs.get retry path added by bead 5xt.13).
+  for (let i = 0; i < 20; i++) {
     await Promise.resolve();
   }
 }
@@ -340,6 +406,58 @@ async function testToolbarStorageRejectionDefaultsToSameTab() {
   } finally {
     process.removeListener("unhandledRejection", onUnhandledRejection);
   }
+}
+
+// --- (i) toolbar click with tab.url missing -> handleActionForTab retries
+//     via api.tabs.get(tab.id); when that retry returns a url, archiving
+//     proceeds normally (bead 5xt.13) ---------------------------------------
+//
+// Mirrors the real Safari-iOS scenario the bead fixes: the action.onClicked
+// callback fires with a url-less tab object (per-site access still being
+// resolved), but a subsequent tabs.get for the same tabId comes back with
+// the url populated.
+
+async function testActionClickRetriesTabsGetWhenUrlMissing() {
+  const h = loadBackground({
+    newTabSetting: false,
+    tabsGetResult: { id: 7, url: "https://example.com/a" },
+  });
+  const listener = h.getOnClickedListener();
+  listener({ id: 7 });
+  await flush();
+
+  check("(i) tabs.get called once", h.calls.tabsGet.length, 1);
+  check("(i) tabs.get called with the clicked tab id", h.calls.tabsGet[0], 7);
+  check("(i) tabs.create not called", h.calls.tabsCreate.length, 0);
+  check("(i) tabs.update called once", h.calls.tabsUpdate.length, 1);
+  check("(i) tabs.update targets the clicked tab", h.calls.tabsUpdate[0] && h.calls.tabsUpdate[0].tabId, 7);
+  check(
+    "(i) tabs.update url is archive.ph/newest/<url>",
+    h.calls.tabsUpdate[0] && h.calls.tabsUpdate[0].url,
+    "https://archive.ph/newest/https://example.com/a"
+  );
+}
+
+// --- (j) toolbar click with tab.url missing and the tabs.get retry still
+//     url-less -> opens settings/settings.html?needs-access=1 in a new tab
+//     instead of silently doing nothing (bead 5xt.13) ----------------------
+
+async function testActionClickOpensSettingsWhenUrlStillMissing() {
+  const h = loadBackground({
+    tabsGetResult: { id: 9 }, // no url even after the retry
+  });
+  const listener = h.getOnClickedListener();
+  listener({ id: 9 });
+  await flush();
+
+  check("(j) tabs.get called once", h.calls.tabsGet.length, 1);
+  check("(j) tabs.update not called", h.calls.tabsUpdate.length, 0);
+  check("(j) tabs.create called once", h.calls.tabsCreate.length, 1);
+  assertTrue(
+    "(j) tabs.create url ends with settings/settings.html?needs-access=1",
+    h.calls.tabsCreate[0] &&
+      h.calls.tabsCreate[0].url.endsWith("settings/settings.html?needs-access=1")
+  );
 }
 
 // --- (b) archive URL + newTab=false -> tabs.update on same tab -----------
@@ -1255,6 +1373,124 @@ async function testOnRemovedClearsSnapshotOriginal() {
   );
 }
 
+// --- iOS popup message path (bead 5xt.14) ----------------------------------
+
+// --- (z1) {type: "toggle-archive", tabId} resolves the tab via tabs.get and
+//     runs it through the same handleActionForTab path action.onClicked
+//     uses, archiving via tabs.update ---------------------------------------
+
+async function testToggleArchiveMessageTogglesViaHandleActionForTab() {
+  const h = loadBackground({
+    newTabSetting: false,
+    tabsGetResult: { id: 40, url: "https://example.com/toggle-msg" },
+  });
+
+  const response = await dispatchPopupMessage(h, { type: "toggle-archive", tabId: 40 });
+
+  check("(z1) tabs.get called with the message's tabId", h.calls.tabsGet[0], 40);
+  check("(z1) tabs.update called once via handleActionForTab", h.calls.tabsUpdate.length, 1);
+  check(
+    "(z1) tabs.update archives the resolved tab's url",
+    h.calls.tabsUpdate[0] && h.calls.tabsUpdate[0].url,
+    "https://archive.ph/newest/https://example.com/toggle-msg"
+  );
+  assertTrue("(z1) listener resolves truthy so the popup can close", Boolean(response));
+}
+
+// --- (z2) toggle-archive with NO tabId falls back to tabs.query's active
+//     tab (the popup has no reliable tab id of its own to send) ------------
+
+async function testToggleArchiveMessageFallsBackToActiveTabQuery() {
+  const h = loadBackground({
+    newTabSetting: false,
+    tabsQueryResult: [{ id: 55, url: "https://example.com/active-tab" }],
+  });
+
+  await dispatchPopupMessage(h, { type: "toggle-archive" });
+
+  check("(z2) tabs.get not called (no tabId given)", h.calls.tabsGet.length, 0);
+  check(
+    "(z2) tabs.query called with active/currentWindow",
+    h.calls.tabsQuery[0],
+    { active: true, currentWindow: true }
+  );
+  check("(z2) tabs.update called once via the active-tab fallback", h.calls.tabsUpdate.length, 1);
+  check(
+    "(z2) tabs.update targets the active tab's id",
+    h.calls.tabsUpdate[0] && h.calls.tabsUpdate[0].tabId,
+    55
+  );
+}
+
+// --- (z3) {type: "get-action-state", tabId} on an archive-mirror url
+//     reports isArchive true, the tab's url, and the extracted original's
+//     domain --------------------------------------------------------------
+
+async function testGetActionStateReportsIsArchiveTrueForArchiveUrl() {
+  const h = loadBackground({
+    tabsGetResult: { id: 41, url: "https://archive.ph/AbC12/https://example.com/story" },
+  });
+
+  const response = await dispatchPopupMessage(h, { type: "get-action-state", tabId: 41 });
+
+  check(
+    "(z3) response echoes the tab's url",
+    response && response.url,
+    "https://archive.ph/AbC12/https://example.com/story"
+  );
+  check("(z3) response reports isArchive true", response && response.isArchive, true);
+  check("(z3) response reports the extracted original's domain", response && response.domain, "example.com");
+  check("(z3) no tabs.update/tabs.create side effect from just asking", h.calls.tabsUpdate.length, 0);
+}
+
+// --- (z4) get-action-state on a normal page reports isArchive false and the
+//     page's own domain ----------------------------------------------------
+
+async function testGetActionStateReportsIsArchiveFalseForNormalUrl() {
+  const h = loadBackground({
+    tabsGetResult: { id: 42, url: "https://example.com/article" },
+  });
+
+  const response = await dispatchPopupMessage(h, { type: "get-action-state", tabId: 42 });
+
+  check("(z4) response echoes the tab's url", response && response.url, "https://example.com/article");
+  check("(z4) response reports isArchive false", response && response.isArchive, false);
+  check("(z4) response reports the page's own domain", response && response.domain, "example.com");
+}
+
+// --- (z5) get-action-state when the tab/url can't be resolved (mirrors
+//     handleActionForTab's own needs-access scenario, bead 5xt.13) responds
+//     {url: null} rather than throwing -------------------------------------
+
+async function testGetActionStateRespondsUrlNullWhenTabUnresolvable() {
+  const h = loadBackground({
+    tabsGetResult: { id: 43 }, // no url, e.g. Safari withheld per-site access
+  });
+
+  const response = await dispatchPopupMessage(h, { type: "get-action-state", tabId: 43 });
+
+  check("(z5) response is exactly {url: null}", response, { url: null });
+}
+
+// --- (z6) background.js's startup getPlatformInfo() check only calls
+//     action.setPopup when the platform is iOS; macOS must NOT get a popup
+//     set (its toolbar click must keep toggling immediately) ---------------
+
+async function testSetPopupOnlyCalledForIOSPlatform() {
+  const hMac = loadBackground({ getPlatformInfoResult: { os: "mac" } });
+  await flush();
+  check("(z6) setPopup not called for os 'mac'", hMac.calls.actionSetPopup.length, 0);
+
+  const hIOS = loadBackground({ getPlatformInfoResult: { os: "ios" } });
+  await flush();
+  check("(z6) setPopup called once for os 'ios'", hIOS.calls.actionSetPopup.length, 1);
+  check(
+    "(z6) setPopup targets popup/popup.html",
+    hIOS.calls.actionSetPopup[0] && hIOS.calls.actionSetPopup[0].popup,
+    "popup/popup.html"
+  );
+}
+
 // --- run all cases ---------------------------------------------------------
 
 async function main() {
@@ -1263,6 +1499,8 @@ async function main() {
   await testNormalPageDefaultNewTab();
   await testStorageGetReturnsEmptyObjectDefaultsToSameTab();
   await testToolbarStorageRejectionDefaultsToSameTab();
+  await testActionClickRetriesTabsGetWhenUrlMissing();
+  await testActionClickOpensSettingsWhenUrlStillMissing();
   await testDeArchiveSameTab();
   await testDeArchiveNewTab();
   await testBareShortCodeNoOp();
@@ -1298,6 +1536,13 @@ async function main() {
   await testToggleFallsBackToStoredSnapshotOriginal();
   await testToggleNoFallbackWhenNoMessageStored();
   await testOnRemovedClearsSnapshotOriginal();
+
+  await testToggleArchiveMessageTogglesViaHandleActionForTab();
+  await testToggleArchiveMessageFallsBackToActiveTabQuery();
+  await testGetActionStateReportsIsArchiveTrueForArchiveUrl();
+  await testGetActionStateReportsIsArchiveFalseForNormalUrl();
+  await testGetActionStateRespondsUrlNullWhenTabUnresolvable();
+  await testSetPopupOnlyCalledForIOSPlatform();
 
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed > 0 ? 1 : 0);

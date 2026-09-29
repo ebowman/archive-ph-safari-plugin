@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Archive.ph Opener</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <p class="notice needs-access" id="needs-access-notice" hidden>
+    Safari has not given Archive.ph Opener access to this website. On
+    iPhone or iPad: Settings &gt; Apps &gt; Safari &gt; Extensions &gt;
+    Archive.ph Opener &gt; All Websites &gt; Allow. On Mac: click the
+    extension's toolbar button and choose Always Allow.
+  </p>
+
+  <button type="button" id="primary-button" class="primary-button" disabled>
+    Loading…
+  </button>
+
+  <section class="quick-toggles" id="quick-toggles" hidden>
+    <p class="domain-label" id="domain-label"></p>
+    <label>
+      <input type="checkbox" id="always-archive-checkbox" />
+      Always archive this domain
+    </label>
+    <label>
+      <input type="checkbox" id="always-original-checkbox" />
+      Always show the original for this domain
+    </label>
+  </section>
+
+  <p class="all-settings">
+    <a href="#" id="all-settings-link">All settings</a>
+  </p>
+
+  <script src="../archive-url.js"></script>
+  <script src="../settings/settings.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -11,6 +11,14 @@
 //
 // Output directory: scripts/icon-out/ (git-ignored)
 //
+// Outputs include universal-icon-1024@1x.png, the single iOS AppIcon used
+// for the light/dark/tinted appearances in
+// app/Archive.ph Opener/Shared (App)/Assets.xcassets/AppIcon.appiconset/.
+// Unlike the mac-icon-*.png tiles, it MUST be a full-bleed, fully opaque
+// 1024x1024 square with no alpha channel and no rounded corners: iOS applies
+// its own squircle mask at render time, and App Store Connect rejects app
+// icons that contain transparency.
+//
 
 import AppKit
 import CoreGraphics
@@ -111,6 +119,34 @@ func renderTemplateGlyph(size: Int) -> NSBitmapImageRep {
     return rep
 }
 
+/// Renders the iOS AppIcon: a full-bleed, fully opaque square (no rounded
+/// corners, no alpha channel) with the archive-box glyph centered at
+/// `glyphFraction` of the canvas width. iOS applies its own squircle mask at
+/// render time, so the corners here must stay square, and App Store Connect
+/// rejects app icons containing transparency — the returned bitmap rep has no
+/// alpha plane at all (see `makeOpaqueBitmapRep`).
+func renderIOSFullBleedTile(size: Int) -> NSBitmapImageRep {
+    let sizeF = CGFloat(size)
+    // Drawn into a normal alpha-capable bitmap (NSGraphicsContext cannot be
+    // created on a truly alpha-less rep); the background fill below covers
+    // the full canvas, so every pixel ends up opaque. writeOpaquePNG later
+    // strips the (unused) alpha plane before encoding.
+    let rep = makeBitmapRep(size: size)
+
+    withGraphicsContext(rep) {
+        let fullRect = CGRect(x: 0, y: 0, width: sizeF, height: sizeF)
+        colorBackground.setFill()
+        NSBezierPath(rect: fullRect).fill()
+
+        // Glyph occupies ~62% of the canvas width, comfortably inside the
+        // central ~80% that survives iOS's squircle mask (which crops
+        // roughly the outer 10% on each side).
+        drawArchiveGlyph(in: fullRect, glyphFraction: 0.62, boxColor: colorPrimaryRed, slotColor: colorAccentRed)
+    }
+
+    return rep
+}
+
 /// Renders the color toolbar glyph (no background tile) at the given pixel
 /// size, using the same red archive-box palette as the color tiles, with the
 /// same ~12% padding geometry the monochrome template glyph used.
@@ -147,6 +183,52 @@ func makeBitmapRep(size: Int) -> NSBitmapImageRep {
     }
     rep.size = NSSize(width: size, height: size)
     return rep
+}
+
+/// Flattens `rep` (assumed fully opaque already) into a CGImage with alpha
+/// info `.noneSkipLast`, i.e. a genuine alpha-free image rather than an RGBA
+/// image whose alpha channel happens to be all-255. NSGraphicsContext cannot
+/// be created directly on an alpha-less NSBitmapImageRep, so this is done as
+/// a post-render flatten step via a CGContext instead.
+func flattenToOpaqueCGImage(_ rep: NSBitmapImageRep) -> CGImage {
+    guard let sourceImage = rep.cgImage else {
+        fatalError("Failed to obtain CGImage from rep")
+    }
+    guard let colorSpace = CGColorSpace(name: CGColorSpace.sRGB) else {
+        fatalError("Failed to create sRGB color space")
+    }
+    guard let context = CGContext(
+        data: nil,
+        width: sourceImage.width,
+        height: sourceImage.height,
+        bitsPerComponent: 8,
+        bytesPerRow: 0,
+        space: colorSpace,
+        bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
+    ) else {
+        fatalError("Failed to create opaque CGContext")
+    }
+    context.draw(sourceImage, in: CGRect(x: 0, y: 0, width: sourceImage.width, height: sourceImage.height))
+    guard let flattened = context.makeImage() else {
+        fatalError("Failed to flatten CGImage to opaque")
+    }
+    return flattened
+}
+
+/// Writes `rep` to `url` as a PNG with no alpha channel at all (not merely an
+/// all-255 alpha channel). Used for the iOS AppIcon, which App Store Connect
+/// rejects if it contains transparency.
+func writeOpaquePNG(_ rep: NSBitmapImageRep, to url: URL) {
+    let flattened = flattenToOpaqueCGImage(rep)
+    let outputRep = NSBitmapImageRep(cgImage: flattened)
+    guard let data = outputRep.representation(using: .png, properties: [:]) else {
+        fatalError("Failed to encode opaque PNG for \(url.path)")
+    }
+    do {
+        try data.write(to: url, options: .atomic)
+    } catch {
+        fatalError("Failed to write \(url.path): \(error)")
+    }
 }
 
 func withGraphicsContext(_ rep: NSBitmapImageRep, _ drawing: () -> Void) {
@@ -207,6 +289,7 @@ struct IconSpec {
         case color
         case template
         case colorToolbar
+        case iosFullBleed
     }
 }
 
@@ -231,6 +314,12 @@ let manifest: [IconSpec] = [
     IconSpec(filename: "mac-icon-256@2x.png", size: 512, kind: .color),
     IconSpec(filename: "mac-icon-512@1x.png", size: 512, kind: .color),
     IconSpec(filename: "mac-icon-512@2x.png", size: 1024, kind: .color),
+
+    // iOS AppIcon.appiconset: a single full-bleed, alpha-free, square-corner
+    // 1024x1024 PNG reused for the light/dark/tinted appearance slots (see
+    // AppIcon.appiconset/Contents.json). Do NOT reuse .color here — that kind
+    // draws rounded corners and an alpha channel, both invalid for iOS.
+    IconSpec(filename: "universal-icon-1024@1x.png", size: 1024, kind: .iosFullBleed),
 ]
 
 // MARK: - Generation
@@ -247,9 +336,15 @@ for spec in manifest {
         rep = renderTemplateGlyph(size: spec.size)
     case .colorToolbar:
         rep = renderColorToolbarGlyph(size: spec.size)
+    case .iosFullBleed:
+        rep = renderIOSFullBleedTile(size: spec.size)
     }
     let url = outDir.appendingPathComponent(spec.filename)
-    writePNG(rep, to: url)
+    if spec.kind == .iosFullBleed {
+        writeOpaquePNG(rep, to: url)
+    } else {
+        writePNG(rep, to: url)
+    }
     print("  wrote \(spec.filename) (\(spec.size)x\(spec.size))")
 }
 

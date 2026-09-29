@@ -13,6 +13,7 @@
     "../extension/archive-url.js",
     "../extension/background.js",
     "../extension/snapshot-probe.js",
-    "../extension/settings/settings.js"
+    "../extension/settings/settings.js",
+    "../extension/popup/popup.js"
   ]
 }

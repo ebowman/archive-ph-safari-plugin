@@ -134,11 +134,20 @@ Extensions list only refreshes on launch.
 This means two app copies are registered. Check with:
 
 ```bash
-pluginkit -m -v -i com.yourCompany.Archive-ph-Opener.Extension
+pluginkit -m -v -i ie.boboco.ArchivePhOpener.Extension
 ```
 
 Fix it by running `./install.sh`, which removes the `app/build` copy and
 re-registers only the `/Applications` copy, then restart Safari.
+
+**Tapping/clicking the extension does nothing.**
+Safari withholds the current tab's URL from the extension until it has
+per-site access, so a tap/click on a page it hasn't been granted access to
+silently does nothing. Newer builds open a settings notice explaining this;
+either way, grant access directly:
+On iPhone/iPad: Settings → Apps → Safari → Extensions → Archive.ph
+Opener → All Websites → Allow. On Mac: click the extension's toolbar
+button and choose Always Allow (or Settings → Extensions in Safari).
 
 ## How it works
 
@@ -168,6 +177,13 @@ re-registers only the `/Applications` copy, then restart Safari.
   `/Applications`, removes the build-directory copy, and unregisters its
   stale LaunchServices entry — so Safari only ever sees one registered
   copy of the extension.
+- On iOS/iPadOS, Safari doesn't surface `options_ui` in a toolbar menu, so
+  the extension's toolbar tap opens `extension/popup/` instead: a small
+  popup with the same "Open in archive.ph" / "Back to original" toggle
+  button, plus quick "Always archive"/"Always show the original" checkboxes
+  for the current site's domain, and an "All settings" link to the full
+  settings page. macOS is unaffected — its toolbar click keeps toggling
+  instantly with no popup. See bead 5xt.7 for a fuller iOS docs pass.
 
 ## Manual test checklist
 

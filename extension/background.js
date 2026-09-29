@@ -7,6 +7,29 @@ if (typeof importScripts === "function" && typeof ArchiveUrl === "undefined") {
 
 const api = typeof browser !== "undefined" ? browser : chrome;
 
+// iOS Safari doesn't surface options_ui as a toolbar menu item, so the
+// popup is the only way to reach settings and the quick domain-list
+// toggles there (bead 5xt.14). macOS should keep action.onClicked firing
+// immediately with no popup (one-click toggle), so setPopup is only ever
+// called when the platform is iOS. iPadOS Safari reports a desktop user
+// agent, so this checks runtime.getPlatformInfo()'s "os" field rather than
+// navigator.userAgent (which would misreport an iPad as "mac"). Written as
+// an inline promise chain with no local binding so it can't collide with
+// any sibling script's top-level declaration sharing this background
+// page's lexical scope (see bead 9k9); a rejected getPlatformInfo call
+// (unsupported in some hosts) is swallowed so it can never surface as an
+// unhandled rejection or block anything else in this file from loading.
+if (api.runtime.getPlatformInfo) {
+  api.runtime
+    .getPlatformInfo()
+    .then((info) => {
+      if (info && info.os === "ios") {
+        api.action.setPopup({ popup: "popup/popup.html" });
+      }
+    })
+    .catch(() => {});
+}
+
 // Mirror domains in order of preference; archive.ph is tried first since
 // it's the canonical/most commonly used mirror. Lives in archive-url.js so
 // the settings page and background script share one source of truth.
@@ -205,8 +228,34 @@ function deArchiveSafe(originalUrl, options) {
   deArchive(originalUrl, options).catch(() => {});
 }
 
-api.action.onClicked.addListener((tab) => {
-  if (!tab || !tab.url) return;
+// Handles a toolbar-button click for `tab` (extracted from the
+// action.onClicked listener so a later bead -- the iOS popup, per bead
+// 5xt.14 -- can call it directly). Safari withholds tab.url from the
+// action.onClicked callback when the extension hasn't been granted
+// per-site access to that page (see bead 5xt.13); iOS Safari has no
+// activeTab-triggered permission prompt path here without a retry, so on a
+// missing url we retry once via api.tabs.get(tab.id) (which can return a
+// fresher tab object with the url populated after Safari's own access
+// check), and if the url is still missing after that we don't silently
+// give up -- we open the settings page with ?needs-access=1 so the user
+// sees an explanation and a path to fix it (Settings > Apps > Safari >
+// Extensions > ... > All Websites > Allow) instead of a dead tap.
+async function handleActionForTab(tab) {
+  if (!tab) return;
+
+  if (!tab.url && typeof tab.id === "number" && api.tabs && api.tabs.get) {
+    try {
+      tab = await api.tabs.get(tab.id);
+    } catch {
+      // Leave tab as-is; the missing-url branch below handles it.
+    }
+  }
+
+  if (!tab || !tab.url) {
+    const url = api.runtime.getURL("settings/settings.html") + "?needs-access=1";
+    await api.tabs.create({ url });
+    return;
+  }
 
   if (ArchiveUrl.isArchiveUrl(tab.url)) {
     const original = ArchiveUrl.extractOriginalUrl(tab.url);
@@ -227,6 +276,10 @@ api.action.onClicked.addListener((tab) => {
   }
 
   openArchiveSafe(tab.url, { tabId: tab.id });
+}
+
+api.action.onClicked.addListener((tab) => {
+  handleActionForTab(tab).catch(() => {});
 });
 
 // ---------------------------------------------------------------------------
@@ -500,8 +553,77 @@ async function handleSnapshotOriginalMessage(message, sender) {
   applyDeArchiveRuleForOriginal(tabId, originalUrl, alwaysArchiveDomains, alwaysOriginalDomains);
 }
 
+// ---------------------------------------------------------------------------
+// iOS popup message path (bead 5xt.14)
+//
+// The popup (extension/popup/popup.js) never touches the tabs API directly
+// -- it only knows what this background page tells it -- so it drives the
+// toggle and labels its own UI entirely through these two request/response
+// messages.
+// ---------------------------------------------------------------------------
+
+// Resolves the tab a popup message is about. Prefers an explicit numeric
+// tabId (looked up via api.tabs.get, mirroring handleActionForTab's own
+// tabs.get retry), but tolerates a missing tabId or a rejected tabs.get by
+// falling back to the active tab in the current window -- the popup itself
+// has no reliable tab id of its own to send (see the comment on
+// handleGetActionStateMessage below), so this fallback is the common case,
+// not just an error path.
+async function resolvePopupTab(tabId) {
+  if (typeof tabId === "number" && api.tabs && api.tabs.get) {
+    try {
+      return await api.tabs.get(tabId);
+    } catch (e) {
+      // Fall through to the active-tab query below.
+    }
+  }
+  if (api.tabs && api.tabs.query) {
+    const tabs = await api.tabs.query({ active: true, currentWindow: true });
+    return (tabs && tabs[0]) || null;
+  }
+  return null;
+}
+
+// Handles {type: "toggle-archive", tabId} from the popup's primary button:
+// resolves the target tab (see resolvePopupTab) and runs it through the
+// exact same handleActionForTab logic the macOS toolbar's action.onClicked
+// listener uses, so the popup's toggle behaves identically to a toolbar
+// click. Always resolves (never rejects) so a resolution failure can't
+// surface as an unhandled rejection to the popup's sendMessage call; either
+// way the popup treats a settled response as "done" and closes itself.
+async function handleToggleArchiveMessage(message) {
+  const tab = await resolvePopupTab(message && message.tabId);
+  await handleActionForTab(tab).catch(() => {});
+  return true;
+}
+
+// Handles {type: "get-action-state", tabId}: reports the resolved tab's
+// url (if any), whether it's currently viewing an archive-mirror page, and
+// the domain the quick-toggle checkboxes apply to, so the popup can label
+// its primary button and checkboxes without ever touching the tabs API
+// itself -- only this background page has activeTab-granted access to the
+// tab's url. Mirrors handleActionForTab's own "give up gracefully"
+// contract: when the tab or its url can't be resolved, responds with
+// {url: null} rather than throwing.
+async function handleGetActionStateMessage(message) {
+  const tab = await resolvePopupTab(message && message.tabId);
+  if (!tab || !tab.url) return { url: null };
+
+  const isArchive = ArchiveUrl.isArchiveUrl(tab.url);
+  const original = isArchive ? ArchiveUrl.extractOriginalUrl(tab.url) : tab.url;
+  const domain = original ? ArchiveUrl.normalizeDomain(original) : null;
+
+  return { url: tab.url, isArchive, domain };
+}
+
 if (api.runtime && api.runtime.onMessage) {
   api.runtime.onMessage.addListener((message, sender) => {
+    if (message && message.type === "toggle-archive") {
+      return handleToggleArchiveMessage(message);
+    }
+    if (message && message.type === "get-action-state") {
+      return handleGetActionStateMessage(message);
+    }
     handleSnapshotOriginalMessage(message, sender).catch(() => {
       // Never let a storage or matching error surface as an unhandled
       // rejection; mirrors the tabs.onUpdated listener's error handling.

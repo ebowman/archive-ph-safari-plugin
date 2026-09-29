@@ -41,6 +41,38 @@ run_gate_tail() {
 
 # --- Fast gates first -------------------------------------------------
 
+XCODE_PBXPROJ="app/Archive.ph Opener/Archive.ph Opener.xcodeproj/project.pbxproj"
+
+run_gate "Xcode project: no leaked absolute paths, placeholder bundle id, or missing wiring" \
+  bash -c '
+    set -euo pipefail
+    pbxproj="$1"
+    if [[ ! -f "${pbxproj}" ]]; then
+      echo "missing ${pbxproj}" >&2
+      exit 1
+    fi
+    if grep -q "/Users/" "${pbxproj}"; then
+      echo "found a leaked absolute /Users/ path in ${pbxproj}" >&2
+      exit 1
+    fi
+    if grep -q "yourCompany" "${pbxproj}"; then
+      echo "found the placeholder yourCompany bundle id in ${pbxproj}" >&2
+      exit 1
+    fi
+    if ! grep -q "\.\./\.\./\.\./extension/manifest\.json" "${pbxproj}"; then
+      echo "missing ../../../extension/manifest.json file reference in ${pbxproj}" >&2
+      exit 1
+    fi
+    if ! grep -q "\.\./\.\./\.\./extension/popup" "${pbxproj}"; then
+      echo "missing ../../../extension/popup folder reference in ${pbxproj}" >&2
+      exit 1
+    fi
+    if ! grep -qF "PRODUCT_BUNDLE_IDENTIFIER = ie.boboco.ArchivePhOpener.Extension" "${pbxproj}"; then
+      echo "missing PRODUCT_BUNDLE_IDENTIFIER = ie.boboco.ArchivePhOpener.Extension in ${pbxproj}" >&2
+      exit 1
+    fi
+  ' _ "${XCODE_PBXPROJ}"
+
 run_gate "manifest.json is valid JSON" \
   bash -c 'python3 -m json.tool extension/manifest.json >/dev/null'
 
@@ -59,12 +91,35 @@ run_gate "syntax: extension/settings/settings.js" \
 run_gate "test suite: test-bootstrap-signing" \
   ./scripts/test-bootstrap-signing.sh
 
+run_gate "syntax: extension/popup/popup.js" \
+  node --check extension/popup/popup.js
+
+run_gate "syntax: build.sh" \
+  bash -n build.sh
+
+run_gate "syntax: install.sh" \
+  bash -n install.sh
+
+run_gate "syntax: scripts/regenerate-xcode-project.sh" \
+  bash -n scripts/regenerate-xcode-project.sh
+
+run_gate "syntax: scripts/release-ios.sh" \
+  bash -n scripts/release-ios.sh
+
+run_gate "syntax: scripts/select-sim.py" \
+  python3 -c "import ast; ast.parse(open('scripts/select-sim.py').read())"
+
+run_gate "syntax: scripts/test-install-sim-select.sh" \
+  bash -n scripts/test-install-sim-select.sh
+
 # --- Node test suites ---------------------------------------------------
 
 run_gate_tail "test suite: test-archive-url" node scripts/test-archive-url.js
 run_gate_tail "test suite: test-background" node scripts/test-background.js
 run_gate_tail "test suite: test-settings" node scripts/test-settings.js
+run_gate_tail "test suite: test-popup" node scripts/test-popup.js
 run_gate_tail "test suite: test-snapshot-probe" node scripts/test-snapshot-probe.js
+run_gate_tail "test suite: test-install-sim-select" scripts/test-install-sim-select.sh
 
 # --- TypeScript structural-lint gate -------------------------------------
 
