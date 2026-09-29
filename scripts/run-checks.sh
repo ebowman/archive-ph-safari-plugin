@@ -103,6 +103,12 @@ run_gate "syntax: scripts/regenerate-xcode-project.sh" \
 run_gate "syntax: scripts/release-ios.sh" \
   bash -n scripts/release-ios.sh
 
+run_gate "syntax: scripts/select-sim.py" \
+  python3 -c "import ast; ast.parse(open('scripts/select-sim.py').read())"
+
+run_gate "syntax: scripts/test-install-sim-select.sh" \
+  bash -n scripts/test-install-sim-select.sh
+
 # --- Node test suites ---------------------------------------------------
 
 run_gate_tail "test suite: test-archive-url" node scripts/test-archive-url.js
@@ -110,6 +116,7 @@ run_gate_tail "test suite: test-background" node scripts/test-background.js
 run_gate_tail "test suite: test-settings" node scripts/test-settings.js
 run_gate_tail "test suite: test-popup" node scripts/test-popup.js
 run_gate_tail "test suite: test-snapshot-probe" node scripts/test-snapshot-probe.js
+run_gate_tail "test suite: test-install-sim-select" scripts/test-install-sim-select.sh
 
 # --- TypeScript structural-lint gate -------------------------------------
 

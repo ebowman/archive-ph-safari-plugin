@@ -12,7 +12,12 @@
 #                      (existing behaviour, unchanged).
 #   --ios-simulator    Build the iOS app for the Simulator (via
 #                      ./build.sh --platform ios-simulator), find or boot a
-#                      simulator, install the app on it, and launch it.
+#                      simulator, install the app on it, and launch it. If
+#                      no simulator is already booted, the fallback iPhone
+#                      is chosen by scripts/select-sim.py, which prefers
+#                      the newest installed iOS runtime (and, within that
+#                      runtime, a "Pro" model over a plain or "Pro Max"
+#                      one) rather than simctl's JSON device order.
 #                      Prints a reminder to manually enable the extension in
 #                      Settings > Apps > Safari > Extensions.
 
@@ -39,9 +44,9 @@ if [[ "${1:-}" == "--ios-simulator" ]]; then
     | python3 -c 'import json,sys; data=json.load(sys.stdin); udids=[d["udid"] for devs in data["devices"].values() for d in devs if d.get("state") == "Booted"]; print("\n".join(udids))')"
 
   if [[ -z "${BOOTED_UDIDS}" ]]; then
-    echo "==> No booted simulator found; booting the first available iPhone..."
+    echo "==> No booted simulator found; selecting the newest-runtime available iPhone..."
     UDID="$(xcrun simctl list devices available -j \
-      | python3 -c 'import json,sys; data=json.load(sys.stdin); udids=[d["udid"] for devs in data["devices"].values() for d in devs if d.get("name","").startswith("iPhone")]; print(udids[0] if udids else "")')"
+      | python3 "${REPO_ROOT}/scripts/select-sim.py")"
 
     if [[ -z "${UDID}" ]]; then
       echo "error: no available iPhone simulator found to boot." >&2
