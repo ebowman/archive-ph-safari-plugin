@@ -139,7 +139,17 @@
 
     let currentDomain = null;
 
-    function setAccessDisabled(disabled) {
+    // `disabled` drives the primary button and the quick-toggle checkboxes:
+    // it's true whenever the popup can't act on the current tab at all,
+    // which is broader than "url is null" (bead 5xt.15's fix) -- it also
+    // covers a resolved but non-http url (e.g. about:blank, or a page
+    // Safari's per-site permission withheld the url for) via canAct below.
+    // `showNeedsAccessNotice` is narrower and only true when url is exactly
+    // null (no url could be resolved at all): a non-null non-http url still
+    // shows its own "Cannot access this page" label text on the button, so
+    // the needs-access hint (which specifically explains the Safari
+    // per-site permission flow) would be misleading there.
+    function setAccessDisabled(disabled, showNeedsAccessNotice) {
       // Redundant with init()'s own early return above, but narrows
       // primaryButton back to non-null inside this nested closure for the
       // tsc --checkJs gate (TS doesn't carry a `const` outer narrowing into
@@ -148,8 +158,7 @@
       primaryButton.disabled = disabled;
       if (alwaysArchiveCheckbox) alwaysArchiveCheckbox.disabled = disabled;
       if (alwaysOriginalCheckbox) alwaysOriginalCheckbox.disabled = disabled;
-      if (needsAccessNotice) needsAccessNotice.hidden = !disabled;
-      if (quickToggles) quickToggles.hidden = disabled;
+      if (needsAccessNotice) needsAccessNotice.hidden = !showNeedsAccessNotice;
     }
 
     function renderQuickToggleCheckboxes() {
@@ -218,16 +227,28 @@
       .then((response) => {
         const url = response && response.url ? response.url : null;
         currentDomain = PopupLogic.domainFor(url);
+        // True only for a url the popup can actually act on (a resolved
+        // http(s) url); false for both url === null (no url at all) and a
+        // resolved-but-non-http url (e.g. about:blank) -- see
+        // setAccessDisabled's comment for how those two false cases differ
+        // in what's shown.
+        const canAct = url && PopupLogic.labelFor(url) !== "Cannot access this page";
 
         primaryButton.textContent = PopupLogic.labelFor(url);
-        setAccessDisabled(url === null);
+        setAccessDisabled(!canAct, url === null);
 
         if (domainLabel) domainLabel.textContent = currentDomain || "";
+        // Hide the quick-toggle section entirely (rather than rendering
+        // blank checkboxes/labels) whenever domainFor couldn't resolve a
+        // domain to apply them to -- e.g. a bare short-code archive url
+        // with no extractable original, or any url canAct is false for.
+        if (quickToggles) quickToggles.hidden = !currentDomain;
         renderQuickToggleCheckboxes();
       })
       .catch(() => {
         primaryButton.textContent = PopupLogic.labelFor(null);
-        setAccessDisabled(true);
+        setAccessDisabled(true, true);
+        if (quickToggles) quickToggles.hidden = true;
       });
   }
 

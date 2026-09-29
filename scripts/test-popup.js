@@ -261,7 +261,241 @@ function assertTrue(name, condition) {
   );
 }
 
+// --- DOM-level tests (bead 5xt.15) ------------------------------------------
+//
+// The tests above load popup.js with no `document` global, so only
+// PopupLogic's pure functions get exercised. These tests instead build a
+// second, separate vm context PER CASE with a minimal fake `document` (just
+// enough getElementById-able stub elements for popup.js's init() to wire up
+// without throwing), a fake `window.close` spy, and a fake `browser` whose
+// runtime.sendMessage/storage.local.get resolve canned values -- mirroring
+// how scripts/test-background.js fakes `chrome`. archive-url.js, settings.js,
+// and popup.js are loaded raw into that one context, same as above and same
+// as popup.html's three sequential <script> tags, so this also re-exercises
+// the bead 9k9 shared-scope hazard under a `document`-having context (the
+// pure-logic harness above only exercises it under a document-less one).
+//
+// popup.js registers its DOM-wiring init() via
+// `document.addEventListener("DOMContentLoaded", init)`; the fake document's
+// addEventListener below just records the last-registered listener for a
+// given event type instead of actually dispatching anything, so a test
+// triggers init() by calling that recorded listener directly. (settings.js
+// registers its own DOMContentLoaded listener for its own init() first, but
+// popup.js is loaded after settings.js and registers second, so the fake's
+// "last listener wins" recording ends up holding popup.js's init -- exactly
+// the one these tests want to trigger. settings.js's own init(), which would
+// throw on this harness's fake document since it reads `location.search`, is
+// deliberately never invoked.)
+
+function makeFakeElement(id) {
+  const listeners = {};
+  return {
+    id,
+    addEventListener(type, fn) {
+      (listeners[type] = listeners[type] || []).push(fn);
+    },
+    dispatch(type, event) {
+      (listeners[type] || []).forEach((fn) => fn(event));
+    },
+    click() {
+      this.dispatch("click", { preventDefault() {} });
+    },
+    setAttribute() {},
+    removeAttribute() {},
+    classList: {
+      add() {},
+      remove() {},
+      contains() {
+        return false;
+      },
+      toggle() {},
+    },
+    textContent: "",
+    disabled: false,
+    hidden: false,
+    checked: false,
+  };
+}
+
+const POPUP_ELEMENT_IDS = [
+  "primary-button",
+  "needs-access-notice",
+  "quick-toggles",
+  "domain-label",
+  "all-settings-link",
+  "always-archive-checkbox",
+  "always-original-checkbox",
+];
+
+// Builds one fresh vm context with popup.html's three scripts loaded raw,
+// backed by a fake document (elements above) and a fake browser whose
+// get-action-state response resolves to `actionStateResponse`. Returns the
+// stub elements plus recorders for sendMessage calls, storage.local.set
+// calls, and window.close calls, and a function to trigger
+// DOMContentLoaded (i.e. run popup.js's init()).
+function buildDomHarness(actionStateResponse) {
+  const elementsById = {};
+  for (const id of POPUP_ELEMENT_IDS) {
+    elementsById[id] = makeFakeElement(id);
+  }
+
+  let domContentLoadedHandler = null;
+
+  const fakeDocument = {
+    getElementById(id) {
+      return Object.prototype.hasOwnProperty.call(elementsById, id) ? elementsById[id] : null;
+    },
+    addEventListener(type, fn) {
+      if (type === "DOMContentLoaded") domContentLoadedHandler = fn;
+    },
+  };
+
+  const closeCalls = [];
+  const fakeWindow = {
+    close() {
+      closeCalls.push(true);
+    },
+  };
+
+  const sentMessages = [];
+  const storageSetCalls = [];
+  const tabsCreateCalls = [];
+  const fakeBrowser = {
+    runtime: {
+      sendMessage(message) {
+        sentMessages.push(message);
+        if (message && message.type === "get-action-state") {
+          return Promise.resolve(actionStateResponse);
+        }
+        return Promise.resolve();
+      },
+      getURL(path) {
+        return `safari-web-extension://fake/${path}`;
+      },
+    },
+    storage: {
+      local: {
+        get() {
+          // Empty lists, matching readDomainListState()'s fallback when
+          // storage has neither key set.
+          return Promise.resolve({});
+        },
+        set(values) {
+          storageSetCalls.push(values);
+          return Promise.resolve();
+        },
+      },
+    },
+    tabs: {
+      create(info) {
+        tabsCreateCalls.push(info);
+        return Promise.resolve({});
+      },
+    },
+  };
+
+  const sandbox = { URL, document: fakeDocument, window: fakeWindow, browser: fakeBrowser };
+  sandbox.globalThis = sandbox;
+  vm.createContext(sandbox);
+
+  vm.runInContext(archiveUrlSource, sandbox, { filename: ARCHIVE_URL_PATH });
+  vm.runInContext(settingsSource, sandbox, { filename: SETTINGS_JS_PATH });
+  vm.runInContext(popupSource, sandbox, { filename: POPUP_JS_PATH });
+
+  if (typeof domContentLoadedHandler !== "function") {
+    throw new Error("popup.js did not register a DOMContentLoaded listener under the fake document");
+  }
+
+  return {
+    elementsById,
+    closeCalls,
+    sentMessages,
+    storageSetCalls,
+    tabsCreateCalls,
+    triggerDomContentLoaded: () => domContentLoadedHandler(),
+  };
+}
+
+// Flushes pending microtasks so chained .then()/.catch() callbacks (popup.js's
+// init() response handling and click handler both chain several) settle
+// before assertions run.
+function flushMicrotasks(times = 10) {
+  let p = Promise.resolve();
+  for (let i = 0; i < times; i++) {
+    p = p.then(() => {});
+  }
+  return p;
+}
+
+async function runDomTests() {
+  // --- Case 1: normal http url -> click sends toggle-archive and closes ---
+  {
+    const harness = buildDomHarness({
+      url: "https://example.com/x",
+      isArchive: false,
+      domain: "example.com",
+    });
+    harness.triggerDomContentLoaded();
+    await flushMicrotasks();
+
+    check(
+      "DOM: normal http url -> primary button enabled",
+      harness.elementsById["primary-button"].disabled,
+      false
+    );
+    check(
+      "DOM: normal http url -> quick-toggles section not hidden",
+      harness.elementsById["quick-toggles"].hidden,
+      false
+    );
+
+    harness.elementsById["primary-button"].click();
+    await flushMicrotasks();
+
+    const toggleMessages = harness.sentMessages.filter((m) => m && m.type === "toggle-archive");
+    assertTrue(
+      "DOM: clicking primary button sends {type: 'toggle-archive'}",
+      toggleMessages.length === 1
+    );
+    check("DOM: clicking primary button calls window.close() exactly once", harness.closeCalls.length, 1);
+  }
+
+  // --- Case 2: non-http url (about:blank) -> disabled, quick-toggles hidden ---
+  {
+    const harness = buildDomHarness({
+      url: "about:blank",
+      isArchive: false,
+      domain: null,
+    });
+    harness.triggerDomContentLoaded();
+    await flushMicrotasks();
+
+    check(
+      "DOM: non-http url (about:blank) -> primary button disabled",
+      harness.elementsById["primary-button"].disabled,
+      true
+    );
+    check(
+      "DOM: non-http url (about:blank) -> quick-toggles section hidden",
+      harness.elementsById["quick-toggles"].hidden,
+      true
+    );
+    check(
+      "DOM: non-http url (about:blank) -> needs-access notice stays hidden (not url === null)",
+      harness.elementsById["needs-access-notice"].hidden,
+      true
+    );
+  }
+}
+
 // --- summary -----------------------------------------------------------------
 
-console.log(`\n${passed} passed, ${failed} failed`);
-process.exit(failed > 0 ? 1 : 0);
+runDomTests()
+  .then(() => {
+    console.log(`\n${passed} passed, ${failed} failed`);
+    process.exit(failed > 0 ? 1 : 0);
+  })
+  .catch((err) => {
+    console.error("FAIL: DOM test harness threw:", err);
+    process.exit(1);
+  });
