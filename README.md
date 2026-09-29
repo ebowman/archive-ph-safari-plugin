@@ -177,6 +177,13 @@ button and choose Always Allow (or Settings → Extensions in Safari).
   `/Applications`, removes the build-directory copy, and unregisters its
   stale LaunchServices entry — so Safari only ever sees one registered
   copy of the extension.
+- On iOS/iPadOS, Safari doesn't surface `options_ui` in a toolbar menu, so
+  the extension's toolbar tap opens `extension/popup/` instead: a small
+  popup with the same "Open in archive.ph" / "Back to original" toggle
+  button, plus quick "Always archive"/"Always show the original" checkboxes
+  for the current site's domain, and an "All settings" link to the full
+  settings page. macOS is unaffected — its toolbar click keeps toggling
+  instantly with no popup. See bead 5xt.7 for a fuller iOS docs pass.
 
 ## Manual test checklist
 

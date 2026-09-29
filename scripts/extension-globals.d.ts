@@ -14,3 +14,10 @@ declare var importScripts: ((...urls: string[]) => void) | undefined;
 // `any` here so this gate can see the name across files without needing
 // full typings for its shape.
 declare var ArchiveUrl: any;
+
+// extension/settings/settings.js assigns this via
+// `globalThis.SettingsLogic = {...}` inside its own IIFE, the same pattern
+// as ArchiveUrl above. extension/popup/popup.js (bead 5xt.14) references it
+// as an ambient global to reuse the domain-list add/remove logic for its
+// quick-toggle checkboxes.
+declare var SettingsLogic: any;

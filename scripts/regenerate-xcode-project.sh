@@ -215,4 +215,16 @@ grep -c '/Users/' "${FINAL_PBXPROJ}" || true
 echo "==> grep -c yourCompany project.pbxproj (expect 0):"
 grep -c 'yourCompany' "${FINAL_PBXPROJ}" || true
 
+# The converter adds a folder reference for every subfolder of extension/
+# automatically; this is not one of the hand fixes above, but it's exactly
+# what extension/popup/ (bead 5xt.14's iOS action popup) depends on to ship
+# with the app, so fail loudly here rather than discovering it missing only
+# once run-checks.sh's pbxproj gate (or a build) fails later.
+if ! grep -q '\.\./\.\./\.\./extension/popup' "${FINAL_PBXPROJ}"; then
+  echo "error: project.pbxproj is missing a ../../../extension/popup folder reference" >&2
+  echo "The converter may not have picked up extension/popup/ as a subfolder." >&2
+  exit 1
+fi
+echo "==> Confirmed ../../../extension/popup folder reference is present."
+
 echo "==> Done. app/Archive.ph Opener regenerated at ${APP_DIR}"

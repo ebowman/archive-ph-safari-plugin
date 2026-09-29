@@ -1,0 +1,133 @@
+/* iOS action popup (bead 5xt.14). Reuses ../settings/settings.css's color
+   tokens so the popup and settings page look like one product, but keeps
+   its own layout: this is a phone-sized popup (Safari sizes it to roughly
+   a slice of the screen on iPhone/iPad), not a full settings page, so
+   everything here targets 44px touch targets and 16px text per Apple's
+   Human Interface Guidelines minimums. macOS never sets this popup (see
+   background.js's iOS-only setPopup call), but the layout stays sane there
+   too in case that ever changes. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  max-width: 100%;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+  color: #1d1d1f;
+  background: #ffffff;
+  margin: 0;
+  padding: 16px;
+}
+
+.notice.needs-access {
+  margin: 0 0 16px 0;
+  padding: 10px 12px;
+  color: #1d1d1f;
+  background: #fff4e5;
+  border: 1px solid #f0c987;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.primary-button {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 8px;
+  background: #0a84ff;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.primary-button:disabled {
+  background: #d2d2d7;
+  color: #6e6e73;
+  cursor: default;
+}
+
+.primary-button:not(:disabled):hover {
+  background: #0071e3;
+}
+
+.quick-toggles {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #d2d2d7;
+}
+
+.domain-label {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #6e6e73;
+  overflow-wrap: anywhere;
+}
+
+.quick-toggles label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.quick-toggles input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  flex: none;
+}
+
+.all-settings {
+  margin: 20px 0 0 0;
+  text-align: center;
+}
+
+.all-settings a {
+  font-size: 14px;
+  color: #0a84ff;
+  text-decoration: none;
+}
+
+.all-settings a:hover {
+  text-decoration: underline;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    color: #f5f5f7;
+    background: #1e1e1e;
+  }
+
+  .notice.needs-access {
+    color: #f5f5f7;
+    background: #4a3b1a;
+    border-color: #7a5f2a;
+  }
+
+  .primary-button:disabled {
+    background: #3a3a3c;
+    color: #a1a1a6;
+  }
+
+  .quick-toggles {
+    border-top-color: #3a3a3c;
+  }
+
+  .domain-label {
+    color: #a1a1a6;
+  }
+}

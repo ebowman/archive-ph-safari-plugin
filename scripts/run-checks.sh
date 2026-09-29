@@ -63,6 +63,10 @@ run_gate "Xcode project: no leaked absolute paths, placeholder bundle id, or mis
       echo "missing ../../../extension/manifest.json file reference in ${pbxproj}" >&2
       exit 1
     fi
+    if ! grep -q "\.\./\.\./\.\./extension/popup" "${pbxproj}"; then
+      echo "missing ../../../extension/popup folder reference in ${pbxproj}" >&2
+      exit 1
+    fi
     if ! grep -qF "PRODUCT_BUNDLE_IDENTIFIER = ie.boboco.ArchivePhOpener.Extension" "${pbxproj}"; then
       echo "missing PRODUCT_BUNDLE_IDENTIFIER = ie.boboco.ArchivePhOpener.Extension in ${pbxproj}" >&2
       exit 1
@@ -84,6 +88,9 @@ run_gate "syntax: extension/snapshot-probe.js" \
 run_gate "syntax: extension/settings/settings.js" \
   node --check extension/settings/settings.js
 
+run_gate "syntax: extension/popup/popup.js" \
+  node --check extension/popup/popup.js
+
 run_gate "syntax: build.sh" \
   bash -n build.sh
 
@@ -101,6 +108,7 @@ run_gate "syntax: scripts/release-ios.sh" \
 run_gate_tail "test suite: test-archive-url" node scripts/test-archive-url.js
 run_gate_tail "test suite: test-background" node scripts/test-background.js
 run_gate_tail "test suite: test-settings" node scripts/test-settings.js
+run_gate_tail "test suite: test-popup" node scripts/test-popup.js
 run_gate_tail "test suite: test-snapshot-probe" node scripts/test-snapshot-probe.js
 
 # --- TypeScript structural-lint gate -------------------------------------
